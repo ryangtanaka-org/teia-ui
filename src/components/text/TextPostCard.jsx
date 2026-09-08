@@ -44,7 +44,7 @@ export function TextPostCard({ nft, showBurn = false }) {
     listings,
     holdings,
   } = nft
-  const authorName = artist_profile?.name || artist_address?.slice(0, 8) + '...'
+  const authorAlias = artist_profile?.name
   const coverUrl = display_uri ? HashToURL(display_uri) : null
 
   // Get editions hold
@@ -127,6 +127,7 @@ export function TextPostCard({ nft, showBurn = false }) {
           <div className={styles.text}>
             <Link to={`${PATH.OBJKT}/${token_id}`} className={styles.post_link}>
               <h2 className={styles.title}>
+                <span aria-hidden="true">😂 </span>
                 {name || `Untitled #${token_id}`}
               </h2>
               <p className={styles.excerpt}>{getExcerpt(description)}</p>
@@ -140,7 +141,10 @@ export function TextPostCard({ nft, showBurn = false }) {
                 }
                 className={styles.author_link}
               >
-                {authorName}
+                {authorAlias && (
+                  <span className={styles.alias}>{authorAlias}</span>
+                )}
+                <span className={styles.address}>{artist_address}</span>
               </Link>
               <span className={styles.date}>{formatDate(minted_at)}</span>
             </div>

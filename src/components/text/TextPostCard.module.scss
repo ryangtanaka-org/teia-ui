@@ -75,32 +75,58 @@
   text-overflow: ellipsis;
 }
 
+// Author + date line, in hot pink. Two shades: the bright pink disappears on
+// the light themes, so those keep a deeper one that still reads as hot pink.
 .meta {
+  --meta-pink: #c2185b;
+
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   gap: 4px 16px;
   font-size: 13px;
-  color: var(--secondary-color);
+  color: var(--meta-pink);
+}
+
+:global(:root[data-theme='dark']),
+:global(:root[data-theme='grass']),
+:global(:root[data-theme='noui']),
+:global(:root[data-theme='midnight']),
+:global(:root[data-theme='coffee']) {
+  .meta {
+    --meta-pink: #ff69b4;
+  }
 }
 
 .author_link {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
   font-weight: 500;
-  color: var(--secondary-color);
+  color: var(--meta-pink);
   text-decoration: none;
 
   &:hover {
-    color: var(--text-color);
     text-decoration: underline;
   }
 
   &:focus-visible {
-    outline: 2px solid var(--text-color);
+    outline: 2px solid var(--meta-pink);
     outline-offset: 2px;
     border-radius: 2px;
   }
 }
 
+.address {
+  font-family: 'Iosevka', monospace;
+  font-weight: 400;
+  word-break: break-all;
+}
+
 .date {
+  color: var(--meta-pink);
+
   &::before {
     content: '·';
     margin-right: 8px;
