@@ -1,22 +1,29 @@
 import React from 'react'
-import Markdown from 'markdown-to-jsx'
+import { Markdown } from '@components/markdown'
 import { Container } from '@atoms/layout'
-import { Button } from '@atoms/button'
 import styles from '@style'
 
 import axios from 'axios'
 
+// Strip markdown syntax for plain-text feed previews to avoid MarkdownToJSX
+// recursion issues when many items are rendered simultaneously.
+const stripMarkdown = (text) => {
+  return text
+    .replace(/!\[.*?\]\(.*?\)/g, '') // images
+    .replace(/\[([^\]]+)\]\(.*?\)/g, '$1') // links → label
+    .replace(/#{1,6}\s+/gm, '') // headings
+    .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1') // bold/italic
+    .replace(/`{1,3}[^`]*`{1,3}/g, '') // inline code / fenced
+    .replace(/^>\s+/gm, '') // blockquotes
+    .replace(/^[-*+]\s+/gm, '') // list items
+    .replace(/\n{2,}/g, ' ') // collapse blank lines
+    .trim()
+}
+
 /**
  * @param {import("@types").MediaTypeProps} renderOptions - Th options for the media renderer
  */
-export const MD = ({
-  displayView,
-  displayUri,
-  artifactUri,
-  previewUri,
-  preview,
-  objktID,
-}) => {
+export const MD = ({ displayView, artifactUri, previewUri, preview }) => {
   const [content, setContent] = React.useState('')
 
   React.useEffect(() => {
@@ -38,21 +45,20 @@ export const MD = ({
         console.error('previewUri is not a base64 encoded markdown', previewUri)
       }
     }
-  }, [artifactUri, previewUri, displayView, displayUri, preview])
+  }, [artifactUri, previewUri, preview])
 
   return displayView ? (
-    <div className={styles.container}>
-      <div className={styles.preview}>
-        <img src={displayUri} alt={`cover for markdown object ${objktID}`} />
-        <div className={styles.button}>
-          <Button alt="View Markdown Token" />
-        </div>
-      </div>
+    <div
+      className={styles.container}
+      role="article"
+      aria-label="Article content"
+    >
+      <Markdown>{content}</Markdown>
     </div>
   ) : (
-    <div>
+    <div className={styles.feed}>
       <Container>
-        <Markdown>{content}</Markdown>
+        <p className={styles.preview}>{stripMarkdown(content).slice(0, 600)}</p>
       </Container>
     </div>
   )

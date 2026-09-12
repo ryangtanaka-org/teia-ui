@@ -8,6 +8,12 @@ import styles from '@style'
 import { useModalStore } from '@context/modalStore'
 import { useUserStore } from '@context/userStore'
 import { useObjktDisplayContext } from '..'
+import {
+  SWAP_TEIA_FEE_DISCLOSURE,
+  maybeWarnLowSwapPrice,
+  clampSwapAmountOnBlur,
+  clampSwapPriceOnBlur,
+} from '@utils/postMintSwap'
 
 /**
  * The Swap Tab
@@ -39,11 +45,7 @@ export const Swap = () => {
 
   const checkPrice = (value) => {
     console.debug(value)
-    if (value <= 0.1) {
-      show(
-        `Price is really low (${value}ꜩ), for giveaways checkout hicetdono (dono.xtz.tools)`
-      )
-    }
+    maybeWarnLowSwapPrice(show, value)
   }
 
   const proxyAdminAddress = nft.artist_profile?.is_split
@@ -74,33 +76,21 @@ export const Swap = () => {
       return
     }
 
-    // swap is valid call API
-    console.debug(
-      address,
-      nft.royalties_total,
-      (price * 1000000).toFixed(0),
-      id,
-      nft.artist_address,
-      parseFloat(amount)
-    )
-    console.log([
-      address,
-      nft.royalties_total,
-      (price * 1e6).toFixed(0),
-      id,
-      nft.artist_address,
-      parseFloat(amount),
-    ])
     if (currency === 'tez') {
       // when taquito returns a success/fail message
-      await swap(
-        address,
-        nft.royalties_total / 1000,
-        (price * 1e6).toFixed(0),
-        id,
-        nft.artist_address,
-        parseFloat(amount)
-      )
+      try {
+        await swap(
+          address,
+          nft.royalties_total / 1000,
+          (price * 1e6).toFixed(0),
+          id,
+          nft.artist_address,
+          parseFloat(amount)
+        )
+      } catch (err) {
+        show(`encountered an error: ${err})`)
+        return
+      }
     }
   }
 
@@ -123,6 +113,7 @@ export const Swap = () => {
 
           <Container>
             <div className={styles.container}>
+              <h4>Quantity</h4>
               <Input
                 type="number"
                 placeholder="OBJKT quantity"
@@ -131,40 +122,29 @@ export const Swap = () => {
                 /* max={total_amount - sales} */
                 onChange={setAmount}
                 onBlur={(e) => {
-                  if (parseInt(e.target.value) > totalOwned) {
-                    setAmount(totalOwned)
-                  }
+                  setAmount(
+                    String(clampSwapAmountOnBlur(e.target.value, totalOwned))
+                  )
                 }}
                 disabled={progress}
               />
               <div style={{ width: '100%', display: 'flex' }}>
-                <div style={{ width: '90%' }}>
+                <div style={{ width: '100%' }}>
+                  <h4>Price</h4>
                   <Input
                     style={style}
                     type="number"
-                    placeholder="Price per OBJKT"
+                    placeholder="Price Per OBJKT (XTZ)"
                     value={price}
                     initial={0}
                     onChange={setPrice}
                     onBlur={(e) => {
-                      const val = parseFloat(e.target.value)
-                      if (val > 1e6) {
-                        setPrice(1e6)
-                      } else if (val < 0) {
-                        setPrice(0)
-                      }
+                      const val = clampSwapPriceOnBlur(e.target.value)
+                      setPrice(val)
                       checkPrice(val)
                     }}
                     disabled={progress}
                   />
-                </div>
-                <div>
-                  <select
-                    onChange={onChange}
-                    style={{ float: 'right', display: 'inline' }}
-                  >
-                    <option value="tezos">tez</option>
-                  </select>
                 </div>
               </div>
               <Button shadow_box onClick={handleSubmit} fit disabled={progress}>
@@ -175,11 +155,7 @@ export const Swap = () => {
 
           <Container>
             <div className={styles.container}>
-              <p>
-                The Teia marketplace fee is set to 2.5%. Fees get directed to
-                the Teia DAO treasury multisig
-                (KT1J9FYz29RBQi1oGLw8uXyACrzXzV1dHuvb)
-              </p>
+              <p>{SWAP_TEIA_FEE_DISCLOSURE}</p>
             </div>
           </Container>
         </div>

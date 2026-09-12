@@ -9,9 +9,15 @@ interface ImportMetaEnv {
   readonly VITE_TEIA_GRAPHQL_API: string
   /** the base url of the tzkt API */
   readonly VITE_TZKT_API: string
+  /** the base url of the Teia donation API */
+  readonly VITE_TEIA_DONATION_API: string
   readonly VITE_TZPROFILES_GRAPHQL_API: string
   readonly VITE_IMGPROXY: string
   readonly VITE_IPFS_UPLOAD_PROXY: string
+  /** public URL of the calendar .ics feed (Subscribe block); empty = derive from origin */
+  readonly VITE_CALENDAR_ICS_URL: string
+  /** read-only thetezos.com MEC API token (public by agreement with TTC) */
+  readonly VITE_MEC_TOKEN: string
   readonly VITE_IPFS_DEFAULT_GATEWAY:
     | 'CDN'
     | 'CLOUDFLARE'

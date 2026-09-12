@@ -12,10 +12,10 @@ type ViewMode = 'single' | 'masonry'
 export type Theme = 'dark' | 'light' | 'kawaii' | 'aqua' | 'coffee' | 'midnight'
 
 export const rpc_nodes = [
-  'https://mainnet.api.tez.ie',
+  'https://tezos-mainnet.octez.io/',
+  'https://tcinfra.net/rpc/tezos/mainnet',
   'https://mainnet.smartpy.io',
   'https://rpc.tzbeta.net',
-  'https://mainnet.tezos.marigold.dev',
   'https://rpc.tzkt.io/mainnet',
   'https://mainnet.teia.rocks',
   'https://teia.art/rpc',
@@ -31,14 +31,23 @@ interface LocalSettingsState {
   has_seen_banner: boolean
   nsfwFriendly: boolean
   photosensitiveFriendly: boolean
+  showBakerOnProfile: boolean
+  showBakerOnToken: boolean
   startFeed: FeedType
   rpcNode: RPC_NODES
   /** Use this to query the current rpc url since it will also resolve the custom one.*/
   getRpcNode: () => RPC_NODES | string
   customRpcNode: string
+  messageNotifications: boolean
+  /** PROTOTYPE (poll #56): per-category auction notification switches. */
+  auctionNotifications: Record<string, boolean>
+  setAuctionNotification: (key: string, v: boolean) => void
   setCustomRpcNode: (v: string) => void
+  setMessageNotifications: (v: boolean) => void
   setNsfwFriendly: (v: boolean) => void
   setPhotosensitiveFriendly: (v: boolean) => void
+  setShowBakerOnProfile: (v: boolean) => void
+  setShowBakerOnToken: (v: boolean) => void
   setStartFeed: (v: FeedType | undefined) => void
   setRpcNode: (rpcNode?: RPC_NODES) => Promise<void>
   setTheme: (theme: Theme, apply?: boolean) => void
@@ -63,6 +72,8 @@ const defaultValues = {
   viewMode: 'single' as ViewMode,
   nsfwFriendly: false,
   photosensitiveFriendly: false,
+  showBakerOnProfile: true,
+  showBakerOnToken: false,
   startFeed: DEFAULT_START_FEED,
   zen: false,
   theme: 'dark' as Theme,
@@ -73,6 +84,16 @@ const defaultValues = {
   tilted: false,
   imgproxy: true,
   has_seen_banner: false,
+  messageNotifications: true,
+  // Poll #56 commenters named objkt's "new auction" firehose as the reason
+  // its notifications are unusable, so that one starts off.
+  auctionNotifications: {
+    outbid: true,
+    ending: true,
+    bidOnYours: true,
+    settled: true,
+    newAuction: false,
+  } as Record<string, boolean>,
 }
 // TODO: replace all the "set" methods with one that merges the state with the provided partial object
 export const useLocalSettings = create<LocalSettingsState>()(
@@ -81,6 +102,12 @@ export const useLocalSettings = create<LocalSettingsState>()(
       (set, get) => ({
         ...defaultValues,
         setHasSeenBanner: (has_seen_banner) => set({ has_seen_banner }),
+        setMessageNotifications: (messageNotifications) =>
+          set({ messageNotifications }),
+        setAuctionNotification: (key, v) =>
+          set((state) => ({
+            auctionNotifications: { ...state.auctionNotifications, [key]: v },
+          })),
         setTilted: (tilted) => set({ tilted }),
         setImgproxy: (imgproxy) => set({ imgproxy }),
         toggleViewMode: () =>
@@ -116,9 +143,10 @@ export const useLocalSettings = create<LocalSettingsState>()(
           return rpcNode
         },
         setCustomRpcNode: (customRpcNode: string) => {
-          if (!customRpcNode) {
+          if (!customRpcNode || typeof customRpcNode !== 'string') {
             return
           }
+
           if (!customRpcNode.startsWith('http')) {
             customRpcNode = `https://${customRpcNode}`
           }
@@ -136,6 +164,9 @@ export const useLocalSettings = create<LocalSettingsState>()(
         setNsfwFriendly: (nsfwFriendly) => set({ nsfwFriendly }),
         setPhotosensitiveFriendly: (photosensitiveFriendly) =>
           set({ photosensitiveFriendly }),
+        setShowBakerOnProfile: (showBakerOnProfile) =>
+          set({ showBakerOnProfile }),
+        setShowBakerOnToken: (showBakerOnToken) => set({ showBakerOnToken }),
         setStartFeed: (startFeed) => set({ startFeed }),
       }),
       {
@@ -145,13 +176,22 @@ export const useLocalSettings = create<LocalSettingsState>()(
         partialize: (state) =>
           Object.fromEntries(
             Object.entries(state).filter(([key]) =>
-              Object.keys(defaultValues).includes(key)
-            )
+              Object.keys(defaultValues).includes(key),
+            ),
           ) as LocalSettingsState,
         onRehydrateStorage: (state) => {
           return (state, error) => {
             if (error) {
               console.error('an error happened during hydration', error)
+            }
+            if (state) {
+              const isValid = rpc_nodes.includes(state.rpcNode as any)
+              if (!isValid) {
+                console.warn(
+                  `Persisted RPC node "${state.rpcNode}" is no longer supported. Resetting to default.`,
+                )
+                state.rpcNode = rpc_nodes[5]
+              }
             }
           }
         },
@@ -163,7 +203,7 @@ export const useLocalSettings = create<LocalSettingsState>()(
 
           return persistedState
         },
-      }
-    )
-  )
+      },
+    ),
+  ),
 )

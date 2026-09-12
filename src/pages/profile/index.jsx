@@ -125,6 +125,12 @@ export default function Display() {
     { title: 'Creations', to: '' },
     { title: 'Collection', to: 'collection' },
     { title: 'Collabs', to: 'collabs' },
+    { title: 'Text', to: 'text' },
+    { title: 'Activity', to: 'activity' },
+    { title: 'Channels', to: 'channels' },
+    { title: 'Comments', to: 'comments' },
+    { title: 'Copyrights', to: 'copyrights' },
+    { title: 'Curations', to: 'curations' },
   ]
 
   return (

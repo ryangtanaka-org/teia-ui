@@ -1,16 +1,28 @@
+import { useEffect, useMemo, useRef } from 'react'
 import { Footer } from '@components/footer'
 import { fadeIn } from '@utils/motion'
 import styles from '@style'
 import { motion } from 'framer-motion'
 import { walletPreview } from '@utils/string'
 import { useUserStore } from '@context/userStore'
+import { useModalStore } from '@context/modalStore'
+import { useLocalSettings } from '@context/localSettingsStore'
+import { useUnreadChannels, useUnreadItems } from '@context/chatReadStore'
+import {
+  useMyInbox,
+  useChannelLatestMessageIds,
+} from '@data/messaging/channels'
+import { useMyPollNotifications } from '@data/messaging/poll-comments'
+import { useMyTokenNotifications } from '@data/messaging/token-comments'
+import { useGateRoles } from '@data/roles'
 
 import { MenuItem } from './MenuItem'
 import { Toggle } from '@atoms/toggles'
-import { Line } from '@atoms/line'
 import { ThemeSelection } from '@atoms/select'
 import { shallow } from 'zustand/shallow'
-import { useLocalSettings } from '@context/localSettingsStore'
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input, select, textarea'
 
 /**
  * The main global menu.
@@ -22,61 +34,203 @@ export const MainMenu = () => {
     shallow
   )
   const [zen, setZen] = useLocalSettings((st) => [st.zen, st.setZen])
+  const setCollapsed = useModalStore((st) => st.setCollapsed)
+
+  const menuRef = useRef(null)
+  const previousFocusRef = useRef(document.activeElement)
+
+  useEffect(() => {
+    const menuEl = menuRef.current
+    if (!menuEl) return
+
+    // Focus the first focusable element (Search)
+    const first = menuEl.querySelector(FOCUSABLE)
+    if (first) first.focus()
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setCollapsed(true)
+        return
+      }
+
+      if (e.key === 'Tab') {
+        const focusable = menuEl.querySelectorAll(FOCUSABLE)
+        if (focusable.length === 0) return
+
+        const firstEl = focusable[0]
+        const lastEl = focusable[focusable.length - 1]
+
+        if (e.shiftKey && document.activeElement === firstEl) {
+          e.preventDefault()
+          lastEl.focus()
+        } else if (!e.shiftKey && document.activeElement === lastEl) {
+          e.preventDefault()
+          firstEl.focus()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      // Restore focus to the element that triggered the menu
+      if (previousFocusRef.current?.focus) {
+        previousFocusRef.current.focus()
+      }
+    }
+  }, [setCollapsed])
+
+  const messageNotifications = useLocalSettings((s) => s.messageNotifications)
+  const notifAddress = messageNotifications ? address : undefined
+
+  const { data: inbox } = useMyInbox(address)
+  const inboxIds = useMemo(() => (inbox ?? []).map((c) => c.id), [inbox])
+  const { data: latestIds } = useChannelLatestMessageIds(inboxIds)
+  const { total: channelUnread } = useUnreadChannels(notifAddress, latestIds)
+
+  const { data: pollMap } = useMyPollNotifications(notifAddress)
+  const { total: pollUnread } = useUnreadItems(
+    notifAddress,
+    'poll-comments',
+    pollMap
+  )
+  const { data: tokenMap } = useMyTokenNotifications(notifAddress)
+  const { total: tokenUnread } = useUnreadItems(
+    notifAddress,
+    'token-comments',
+    tokenMap
+  )
+
+  // Unread is surfaced in one place only: the aggregate badge on the
+  // Notifications menu item (and the /notifications page). The
+  // per-section dots were removed to keep the menu clean.
+  const showNotificationsBadge = channelUnread + pollUnread + tokenUnread > 0
 
   const currentName = proxyName || userInfo?.name
   const currentAddress = proxyAddress || address
 
-  // TODO: Search doesn't really make sense anymore? Does it? (commented out for now)
+  // One role-resolution path (mock-aware) shared with the moderation guard.
+  const { data: gateRoles } = useGateRoles(address)
+  const canModerate = Boolean(gateRoles?.canModerate)
+
+  // TODO: Search doesn't really make sense anymore? Does it? (commented out for now), will be reworked later on.
+  const sections = [
+    {
+      title: 'Account',
+      items: address
+        ? [
+            {
+              label: 'Profile',
+              route: `${currentName || 'tz/' + currentAddress}` || 'tz',
+              need_sync: !currentName || !currentAddress,
+            },
+            {
+              label: 'Notifications',
+              route: 'notifications',
+              need_sync: true,
+              badge: showNotificationsBadge,
+            },
+            { label: 'Edit Profile', route: 'subjkt', need_sync: true },
+            { label: 'Settings', route: 'settings' },
+            ...(canModerate
+              ? [{ label: 'Moderation', route: 'moderation', need_sync: true }]
+              : []),
+          ]
+        : [
+            { label: 'Sign in', route: 'sync' },
+            // Settings are device-local, useful signed-out too.
+            { label: 'Settings', route: 'settings' },
+          ],
+    },
+    {
+      title: 'Create',
+      items: [
+        { label: 'Mint', route: 'mint', need_sync: true, primary: true },
+        { label: 'Collaborations', route: 'collaborate', need_sync: true },
+        { label: 'Register Copyright', route: 'copyright' },
+      ],
+    },
+    {
+      title: 'Explore',
+      items: [
+        { label: 'Search', route: 'search' },
+        { label: 'Activity', route: 'activity' },
+        { label: 'Text', route: 'text' },
+        { label: 'Curations', route: 'curations' },
+        { label: 'Calendar', route: 'calendar' },
+        { label: 'Copyright Marketplace', route: 'copyrightmarketplace' },
+      ],
+    },
+    {
+      // PROTOTYPE (poll #56) — remove with the rest of the auctions mock if
+      // the community votes this down.
+      title: 'Auctions',
+      items: [
+        { label: 'Live Auctions', route: 'auctions' },
+        { label: 'Auction Activity', route: 'auctions/activity' },
+      ],
+    },
+    {
+      title: 'Community & DAO',
+      items: [
+        { label: 'Public Channels', route: 'publicchannels' },
+        { label: 'Polls', route: 'polls' },
+        { label: 'DAO Governance', route: 'dao' },
+        { label: 'Donate', route: 'donate' },
+        { label: 'Bakers', route: 'bakers' },
+      ],
+    },
+    {
+      title: 'Learn',
+      items: [
+        { label: 'Wiki', route: 'wiki' },
+        { label: 'Getting Started', route: 'faq' },
+        { label: 'About', route: 'about' },
+      ],
+    },
+  ]
+
   return (
-    <motion.div className={`${styles.menu}`} {...fadeIn()}>
+    <motion.div
+      ref={menuRef}
+      className={`${styles.menu}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Main menu"
+      {...fadeIn()}
+    >
       <nav className={`${styles.content}`}>
-        <div className={`${styles.menu_left}`}>
-          {/* <MenuItem route="search" /> */}
-          <MenuItem className={styles.menu_label} route="search" />
-          <MenuItem className={styles.menu_label} route="about" />
-          <MenuItem className={styles.menu_label} label="F.A.Q" route="faq" />
-        </div>
-        <Line className={styles.line} vertical />
-        <div className={styles.menu_right}>
-          <div className={styles.address}>{walletPreview(address)}</div>
-          <MenuItem
-            className={styles.menu_label}
-            label="Mint"
-            route="mint"
-            need_sync
-          />
-          <MenuItem
-            className={styles.menu_label}
-            label="Assets"
-            route={`${currentName || currentAddress}` || 'tz'}
-            need_sync={!currentName || !currentAddress}
-          />
-          <MenuItem
-            className={styles.menu_label}
-            need_sync
-            route="collaborate"
-          />
-
-          <MenuItem
-            className={styles.menu_label}
-            label="Profile"
-            route="subjkt"
-            need_sync
-          />
-
-          <MenuItem
-            className={styles.menu_label}
-            label="DAO governance"
-            route="dao"
-          />
-
-          <MenuItem className={styles.menu_label} label="Polls" route="polls" />
+        {sections.map((section) => (
+          <section key={section.title} className={styles.menu_section}>
+            <h2 className={styles.menu_section_title}>{section.title}</h2>
+            {section.title === 'Account' && address && (
+              <div className={styles.address}>{walletPreview(address)}</div>
+            )}
+            <ul className={styles.menu_section_list}>
+              {section.items.map((item) => (
+                <li key={item.label}>
+                  <MenuItem
+                    className={`${styles.menu_label} ${
+                      item.primary ? styles.menu_primary : ''
+                    }`}
+                    label={item.label}
+                    route={item.route}
+                    need_sync={item.need_sync}
+                    badge={item.badge}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+        <section className={styles.menu_section}>
+          <h2 className={styles.menu_section_title}>Preferences</h2>
           <div className={styles.state_buttons}>
-            {/* <Toggle box onToggle={toggleTheme} toggled={theme === 'dark'} /> */}
             <Toggle box label="ZEN" onToggle={setZen} toggled={zen} />
             <ThemeSelection className={styles.theme_selection} />
           </div>
-        </div>
+        </section>
       </nav>
       <Footer pin />
     </motion.div>

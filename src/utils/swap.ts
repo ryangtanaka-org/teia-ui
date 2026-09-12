@@ -47,16 +47,16 @@ export function createAddOperatorCall(
 ): WalletParamsWithKind {
   return {
     kind: OpKind.TRANSACTION,
-    ...objktsContract.methods
-      .update_operators([
-        {
+    ...objktsContract.methodsObject
+      .update_operators(
+        [{
           add_operator: {
             operator: operatorAddress,
             token_id: parseFloat(objkt_id),
             owner: ownerAddress,
           },
-        },
-      ])
+        },]
+      )
       .toTransferParams({ amount: 0, mutez: true, storageLimit: 175 }),
   }
 }
@@ -69,16 +69,16 @@ export function createRemoveOperatorCall(
 ): WalletParamsWithKind {
   return {
     kind: OpKind.TRANSACTION,
-    ...objktsContract.methods
-      .update_operators([
-        {
+    ...objktsContract.methodsObject
+      .update_operators(
+        [{
           remove_operator: {
             operator: operatorAddress,
             token_id: parseFloat(objkt_id),
             owner: ownerAddress,
           },
-        },
-      ])
+        },]
+      )
       .toTransferParams({ amount: 0, mutez: true, storageLimit: 175 }),
   }
 }
@@ -97,14 +97,13 @@ export function createSwapCall(
   if (type === SWAP_TYPE_TEIA) {
     return {
       kind: OpKind.TRANSACTION,
-      ...marketplaceContract.methods
-        .swap(
-          objktsAddress,
-          parseFloat(objkt_id),
-          objkt_amount,
-          xtz_per_objkt,
-          royalties,
-          creator
+      ...marketplaceContract.methodsObject.swap({
+          fa2: objktsAddress,
+          objkt_id: parseInt(objkt_id, 10),
+          objkt_amount: objkt_amount,
+          xtz_per_objkt: xtz_per_objkt,
+          royalties: royalties,
+          creator: creator}
         )
         .toTransferParams({ amount: 0, mutez: true, storageLimit: 300 }),
     }
@@ -113,8 +112,13 @@ export function createSwapCall(
   if (type === SWAP_TYPE_HEN) {
     return {
       kind: OpKind.TRANSACTION,
-      ...marketplaceContract.methods
-        .swap(creator, objkt_amount, objkt_id, royalties, xtz_per_objkt)
+      ...marketplaceContract.methodsObject.swap({
+          creator,
+          objkt_amount,
+          objkt_id: parseInt(objkt_id, 10),
+          royalties,
+          xtz_per_objkt,
+        })
         .toTransferParams({ amount: 0, mutez: true, storageLimit: 300 }),
     }
   }
@@ -174,7 +178,7 @@ export async function createLambdaSwapCall(
   royalties: number,
   creator: string
 ): Promise<WalletParamsWithKind> {
-  const data: any = {
+  const data = {
     marketplaceAddress,
     params: {
       fa2: objktsAddress,
@@ -191,8 +195,11 @@ export async function createLambdaSwapCall(
 
   return {
     kind: OpKind.TRANSACTION,
-    ...collabContract.methods
-      .execute(teiaSwapLambda, packed)
+    ...collabContract.methodsObject
+      .execute({
+        lambda: teiaSwapLambda,
+        packedParams: packed,
+      })
       .toTransferParams({ amount: 0, mutez: true, storageLimit: 300 }),
   }
 }

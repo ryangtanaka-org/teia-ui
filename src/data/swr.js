@@ -1,14 +1,37 @@
 import useSWR from 'swr'
-import { bytes2Char } from '@taquito/utils'
-import { DAO_TOKEN_CONTRACT, DAO_TOKEN_DECIMALS } from '@constants'
-import { getTzktData, fetchObjktDetails } from '@data/api'
+import useSWRInfinite from 'swr/infinite'
+import axios from 'axios'
+import { gql, request } from 'graphql-request'
+import { bytesToString } from '@taquito/utils'
+import {
+  DAO_TOKEN_CONTRACT,
+  DAO_TOKEN_DECIMALS,
+  COPYRIGHT_CONTRACT,
+  DAO_TREASURY_CONTRACT,
+  HEN_CONTRACT_FA2,
+  TEIA_MULTISIG_BLOG_TAG,
+  BAKING_BAD_BAKERS_API,
+} from '@constants'
+import {
+  getTzktData,
+  fetchObjktDetails,
+  BaseTokenFieldsFragment,
+  fetchGraphQL,
+} from '@data/api'
+import laggy from '@utils/swr-laggy-middleware'
+import { useModerators } from '@data/roles'
+import {
+  ACTIVITY_EVENT_TYPES,
+  MINT_TYPES,
+  TEIA_LISTING_TYPES,
+} from '@utils/activity'
 
 function reorderBigmapData(data, subKey, decode = false) {
   const bigmapData = data ? {} : undefined
   data?.forEach(
     (item) =>
       (bigmapData[subKey ? item.key[subKey] : item.key] = decode
-        ? bytes2Char(item.value)
+        ? bytesToString(item.value)
         : item.value)
   )
 
@@ -22,6 +45,139 @@ export function useBalance(address) {
   )
 
   return [data ? data / 1000000 : 0, mutate]
+}
+
+/**
+ * Fetch baker an account currently delegates to.
+ * Returns the TzKT delegate object `{ alias, address, active }` or null when
+ * the account delegates to nobody. `active === false` means the baker has been
+ * deactivated.
+ */
+export function useAccountDelegate(address) {
+  const { data, mutate } = useSWR(
+    address ? `/v1/accounts/${address}` : null,
+    getTzktData
+  )
+  return [data ? data.delegate ?? null : undefined, mutate]
+}
+
+/**
+ * Fetch on-chain info about a baker (delegate) straight from TzKT.
+ */
+export function useBakerInfo(address) {
+  const { data, mutate } = useSWR(
+    address ? `/v1/delegates/${address}` : null,
+    getTzktData
+  )
+
+  return [data, mutate]
+}
+
+/**
+ * Full TzKT account object. `undefined` while loading. `type === 'delegate'`
+ * means the account is a baker.
+ */
+export function useAccount(address) {
+  const { data, mutate } = useSWR(
+    address ? `/v1/accounts/${address}` : null,
+    getTzktData
+  )
+
+  return [data, mutate]
+}
+
+/**
+ * Total number of bakers (active only by default).
+ */
+export function useBakersCount(active = true) {
+  const parameters = active ? { active: true } : {}
+  const { data, mutate } = useSWR(
+    ['/v1/delegates/count', parameters],
+    getTzktData
+  )
+
+  return [data ? parseInt(data) : 0, mutate]
+}
+
+/**
+ * A page of bakers, by default active ones sorted by staking power.
+ */
+export function useBakers(limit = 25, offset = 0) {
+  const parameters = {
+    active: true,
+    'sort.desc': 'votingPower',
+    select:
+      'address,alias,active,stakingBalance,delegatedBalance,numDelegators,balance',
+    limit,
+    offset,
+  }
+  const { data, mutate } = useSWR(['/v1/delegates', parameters], getTzktData)
+
+  return [data, mutate]
+}
+
+/**
+ * Test Cakk ti fetch delegators.
+ * Subject to change,
+ */
+export function useAllDelegates() {
+  const parameters = {
+    select: 'address,bakingPower,numDelegators',
+    limit: 10000,
+  }
+  const { data, mutate } = useSWR(['/v1/delegates', parameters], getTzktData)
+
+  return [data, mutate]
+}
+
+const fetchJson = async (url) => (await axios.get(url)).data
+
+/**
+ * Fetch Baking Bad bakers registry.
+ */
+export function useBakerRegistry() {
+  const { data, error, mutate } = useSWR(BAKING_BAD_BAKERS_API, fetchJson, {
+    revalidateOnFocus: false,
+    dedupingInterval: 300_000,
+  })
+
+  return [data, error, mutate]
+}
+
+/**
+ * Fetch a single baker from Baking Bad API
+ */
+export function useBakerRegistryEntry(address) {
+  const { data, mutate } = useSWR(
+    address ? `${BAKING_BAD_BAKERS_API}/${address}` : null,
+    fetchJson,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 300_000,
+      shouldRetryOnError: false,
+    }
+  )
+
+  return [data, mutate]
+}
+
+/**
+ * A page of accounts that delegate to the given baker, heaviest first.
+ */
+export function useBakerDelegators(address, limit = 25, offset = 0) {
+  const parameters = {
+    delegate: address,
+    'sort.desc': 'balance',
+    select: 'address,alias,balance,delegationLevel,delegationTime',
+    limit,
+    offset,
+  }
+  const { data, mutate } = useSWR(
+    address ? ['/v1/accounts', parameters] : null,
+    getTzktData
+  )
+
+  return [data, mutate]
 }
 
 export function useDaoTokenBalance(address) {
@@ -152,6 +308,50 @@ export function useAliases(addresses) {
   return [reorderBigmapData(data, undefined, true), mutate]
 }
 
+export function useUsers(addresses) {
+  const unique = addresses
+    ? [
+        ...new Set(
+          addresses.filter((a) => typeof a === 'string' && a.length > 0)
+        ),
+      ]
+    : []
+  unique.sort()
+  const key = unique.length > 0 ? `teia_users:${unique.join(',')}` : null
+
+  const { data, mutate } = useSWR(
+    key,
+    async () => {
+      const { data } = await fetchGraphQL(
+        `
+        query BatchUsers($addresses: [String!]!) {
+          teia_users(where: { user_address: { _in: $addresses } }) {
+            user_address
+            name
+            metadata {
+              data
+            }
+          }
+        }
+        `,
+        'BatchUsers',
+        { addresses: unique }
+      )
+      const map = {}
+      for (const u of data?.teia_users ?? []) {
+        map[u.user_address] = {
+          alias: u.name || undefined,
+          logo: u.metadata?.data?.identicon || undefined,
+        }
+      }
+      return map
+    },
+    { revalidateOnFocus: false, dedupingInterval: 60_000 }
+  )
+
+  return [data || {}, mutate]
+}
+
 export function useDaoUsersAliases(userAddress, representatives, proposals) {
   const addresses = new Set()
 
@@ -255,4 +455,899 @@ export function useObjkt(id) {
   )
 
   return [data, mutate]
+}
+
+/**
+ * Batch-fetch multiple tokens by id in a single GraphQL request.
+ * Returns a map of token_id -> minimal token info (name + cover uris),
+ * avoiding the N+1 problem of calling useObjkt per row.
+ */
+export function useObjktsByIds(ids) {
+  const unique = [...new Set((ids ?? []).filter(Boolean).map(String))].sort()
+  const { data } = useSWR(
+    unique.length ? ['/objkts-by-ids', unique.join(',')] : null,
+    async () => {
+      const result = await fetchGraphQL(
+        `query ObjktsByIds($ids: [String!]!) {
+           tokens(where: { token_id: { _in: $ids } }) {
+             token_id
+             name
+             display_uri
+             thumbnail_uri
+           }
+         }`,
+        'ObjktsByIds',
+        { ids: unique }
+      )
+      const out = {}
+      for (const t of result?.data?.tokens ?? []) {
+        out[t.token_id] = t
+      }
+      return out
+    },
+    { revalidateIfStale: false, revalidateOnFocus: false }
+  )
+
+  return data ?? {}
+}
+
+export const fetchTokenMetadataForCopyrightSearch = async (
+  contractAddress,
+  tokenId
+) => {
+  // Use TEIA GraphQL API via fetchObjktDetails
+  if (contractAddress === HEN_CONTRACT_FA2) {
+    try {
+      const tokenData = await fetchObjktDetails(tokenId.toString())
+
+      if (tokenData) {
+        let creators = []
+        if (
+          tokenData.artist_profile?.is_split &&
+          tokenData.artist_profile?.split_contract?.shareholders
+        ) {
+          // For split contracts, include all shareholders as creators
+          creators = tokenData.artist_profile.split_contract.shareholders.map(
+            (s) => s.shareholder_address
+          )
+        } else {
+          // Single creator
+          creators = [tokenData.artist_address]
+        }
+
+        return {
+          contract: {
+            address: tokenData.fa2_address,
+          },
+          tokenId: tokenData.token_id,
+          metadata: {
+            name: tokenData.name,
+            description: tokenData.description,
+            displayUri: tokenData.display_uri,
+            thumbnailUri: tokenData.thumbnail_uri,
+            artifactUri: tokenData.artifact_uri,
+            mimeType: tokenData.mime_type,
+            creators: creators,
+            decimals: '0',
+            royalties: tokenData.royalties,
+            editions: tokenData.editions,
+            mintedAt: tokenData.minted_at,
+            tags: tokenData.tags?.map((t) => t.tag) || [],
+            artist_profile: tokenData.artist_profile,
+            teia_meta: tokenData.teia_meta,
+            rights: tokenData.rights,
+            right_uri: tokenData.right_uri,
+          },
+        }
+      }
+    } catch (error) {
+      console.error(
+        'Error fetching from TEIA GraphQL, falling back to TzKT:',
+        error
+      )
+    }
+  }
+
+  // Default TzKT API for non-HEN tokens
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/tokens?contract=${contractAddress}&tokenId=${tokenId}`
+  const response = await fetch(url)
+  if (!response.ok) throw new Error('Failed to fetch metadata')
+  const data = await response.json()
+  return data[0]
+}
+
+// Batch fetching for teia & non teia tokens on graphql
+
+const TOKEN_BATCH_CHUNK = 50
+
+const fetchHenTokensMetadata = async (tokenIds, result) => {
+  const query = `
+    query CopyrightHenTokens($tokenIds: [String!]!) {
+      tokens(
+        where: {
+          token_id: { _in: $tokenIds }
+          fa2_address: { _eq: "${HEN_CONTRACT_FA2}" }
+        }
+      ) {
+        ...baseTokenFields
+      }
+    }
+    ${BaseTokenFieldsFragment}
+  `
+  const res = await fetchGraphQL(query, 'CopyrightHenTokens', { tokenIds })
+  res?.data?.tokens?.forEach((t) => {
+    result.set(`${HEN_CONTRACT_FA2}:${t.token_id}`, {
+      name: t.name,
+      description: t.description,
+      displayUri: t.display_uri,
+      thumbnailUri: t.thumbnail_uri,
+      artifactUri: t.artifact_uri,
+      mimeType: t.mime_type,
+      creators: [t.artist_address],
+      editions: t.editions,
+      tags: t.tags?.map((tag) => tag.tag) || [],
+    })
+  })
+}
+
+/**
+ * Batch-fetch token metadata for the copyright pages.
+ *
+ * @param {Array<{ contract: string, tokenId: string | number }>} tokens
+ * @returns {Promise<Map<string, any>>} keyed by `${contract}:${tokenId}` -> metadata
+ */
+export const fetchTokensMetadataBatch = async (tokens = []) => {
+  const result = new Map()
+
+  const henIds = []
+  const byContract = new Map()
+  for (const { contract, tokenId } of tokens) {
+    if (contract === HEN_CONTRACT_FA2) {
+      henIds.push(String(tokenId))
+    } else {
+      if (!byContract.has(contract)) byContract.set(contract, [])
+      byContract.get(contract).push(String(tokenId))
+    }
+  }
+
+  // Expand each contract into chunked `tokenId.in=` requests.
+  const tzktChunks = []
+  for (const [contract, tokenIds] of byContract.entries()) {
+    for (let i = 0; i < tokenIds.length; i += TOKEN_BATCH_CHUNK) {
+      tzktChunks.push([contract, tokenIds.slice(i, i + TOKEN_BATCH_CHUNK)])
+    }
+  }
+
+  await Promise.all([
+    ...(henIds.length
+      ? [fetchHenTokensMetadata(henIds, result).catch(() => {})]
+      : []),
+    ...tzktChunks.map(async ([contract, tokenIds]) => {
+      try {
+        const url = `${
+          import.meta.env.VITE_TZKT_API
+        }/v1/tokens?contract=${contract}&tokenId.in=${tokenIds.join(
+          ','
+        )}&limit=${TOKEN_BATCH_CHUNK}`
+        const response = await fetch(url)
+        if (!response.ok) return
+        const data = await response.json()
+        for (const item of data) {
+          if (item?.metadata) {
+            result.set(`${contract}:${item.tokenId}`, item.metadata)
+          }
+        }
+      } catch {
+        // ignore chunk-level failures; affected cards show a placeholder
+      }
+    }),
+  ])
+
+  return result
+}
+
+export async function fetchUserCopyrights(address) {
+  if (!address) return []
+
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${COPYRIGHT_CONTRACT}/bigmaps/copyrights/keys?key.address=${address}&limit=100&active=true`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) {
+      throw new Error(`TzKT API error: ${res.statusText}`)
+    }
+
+    const data = await res.json()
+    return data
+  } catch (err) {
+    console.error('Failed to fetch user copyrights:', err)
+    return []
+  }
+}
+
+/**
+ * Fetch the copyright registry records connected to a specific token.
+ */
+export async function fetchTokenCopyrights(contract, tokenId) {
+  if (!contract || tokenId == null) return []
+
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${COPYRIGHT_CONTRACT}/bigmaps/copyrights/keys?active=true&limit=100&value.related_tezos_nfts.%5B*%5D.contract=${contract}&value.related_tezos_nfts.%5B*%5D.token_id=${tokenId}`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+    const data = await res.json()
+    return data.filter((entry) =>
+      entry.value?.related_tezos_nfts?.some(
+        (nft) =>
+          nft.contract === contract && String(nft.token_id) === String(tokenId)
+      )
+    )
+  } catch (err) {
+    console.error('Failed to fetch token copyrights:', err)
+    return []
+  }
+}
+
+const clauseFilterMap = {
+  reproduce: 'value.clauses.reproduce',
+  broadcast: 'value.clauses.broadcast',
+  publicDisplay: 'value.clauses.publicDisplay',
+  createDerivativeWorks: 'value.clauses.createDerivativeWorks',
+  requireAttribution: 'value.clauses.requireAttribution',
+  rightsAreTransferable: 'value.clauses.rightsAreTransferable',
+  releasePublicDomain: 'value.clauses.releasePublicDomain',
+  expirationDate: 'value.clauses.expirationDateExists',
+}
+
+function applyCopyrightFilters(params, filters) {
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === 'allowed' || value === 'denied') {
+      const param = clauseFilterMap[key]
+      if (param) {
+        params.set(param, value === 'allowed' ? 'true' : 'false')
+      }
+    }
+    if (
+      key === 'exclusiveRights' &&
+      (value === 'allowed' || value === 'denied')
+    ) {
+      params.set(
+        'value.clauses.exclusiveRights',
+        value === 'allowed' ? 'creator' : 'owner'
+      )
+    }
+  }
+}
+
+export async function fetchCopyrightsPaginated({
+  offset = 0,
+  limit = 20,
+  filters = {},
+} = {}) {
+  const params = new URLSearchParams()
+  params.set('limit', String(limit))
+  params.set('offset', String(offset))
+  params.set('sort.desc', 'id')
+  params.set('active', 'true')
+  applyCopyrightFilters(params, filters)
+
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${COPYRIGHT_CONTRACT}/bigmaps/copyrights/keys?${params.toString()}`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+    return await res.json()
+  } catch (err) {
+    console.error('Failed to fetch paginated copyrights:', err)
+    return []
+  }
+}
+
+export async function fetchCopyrightsCount(filters = {}) {
+  const params = new URLSearchParams()
+  params.set('active', 'true')
+  applyCopyrightFilters(params, filters)
+
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${COPYRIGHT_CONTRACT}/bigmaps/copyrights/keys/count?${params.toString()}`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+    return await res.json()
+  } catch (err) {
+    console.error('Failed to fetch copyrights count:', err)
+    return 0
+  }
+}
+
+export async function fetchCreatorAliases(addresses) {
+  if (!addresses || addresses.length === 0) return new Map()
+
+  const query = `
+    query GetAliases($addresses: [String!]!) {
+      teia_users(where: { user_address: { _in: $addresses } }) {
+        user_address
+        name
+      }
+    }
+  `
+
+  try {
+    const result = await fetchGraphQL(query, 'GetAliases', { addresses })
+    const map = new Map()
+    result?.data?.teia_users?.forEach((user) => {
+      if (user.name) {
+        map.set(user.user_address, user.name)
+      }
+    })
+    return map
+  } catch (err) {
+    console.error('Failed to fetch creator aliases:', err)
+    return new Map()
+  }
+}
+
+export async function fetchAllCopyrights() {
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${COPYRIGHT_CONTRACT}/bigmaps/copyrights/keys?limit=100&active=true`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+    return await res.json()
+  } catch (err) {
+    console.error('Failed to fetch all copyrights:', err)
+    return []
+  }
+}
+
+export async function fetchProposals() {
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${COPYRIGHT_CONTRACT}/bigmaps/proposals/keys?limit=100&active=true`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) {
+      throw new Error(`TzKT API error: ${res.statusText}`)
+    }
+
+    return await res.json()
+  } catch (err) {
+    console.error('Failed to fetch proposals:', err)
+    return []
+  }
+}
+
+export async function fetchAllVotes(address) {
+  const addressFilter = address ? `&key.address=${address}` : ''
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${COPYRIGHT_CONTRACT}/bigmaps/votes/keys?limit=500&active=true${addressFilter}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+    return await res.json()
+  } catch (err) {
+    console.error('Failed to fetch votes:', err)
+    return []
+  }
+}
+
+export async function fetchExpirationTime() {
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${DAO_TREASURY_CONTRACT}/storage?path=expiration_time`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+    const data = await res.json()
+    return parseInt(data)
+  } catch (err) {
+    console.error('Failed to fetch expiration_time:', err)
+    return 0
+  }
+}
+
+export async function fetchAgreementText() {
+  const url = `${
+    import.meta.env.VITE_TZKT_API
+  }/v1/contracts/${COPYRIGHT_CONTRACT}/storage?path=agreement_text`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+    const data = await res.json()
+    return data
+  } catch (err) {
+    console.error('Failed to fetch expiration_time:', err)
+    return 0
+  }
+}
+
+export function useDaoTokenHolders(limit = 10) {
+  const { data, mutate, error } = useSWR(
+    [`/dao/token-holders/${limit}`, limit],
+    async () => {
+      const url = `${
+        import.meta.env.VITE_TZKT_API
+      }/v1/tokens/balances?token.contract.eq=${DAO_TOKEN_CONTRACT}&token.tokenId.eq=0&sort.desc=balance&limit=${limit}`
+
+      try {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+        const holders = await res.json()
+
+        return holders.map((holder) => ({
+          address: holder.account.address,
+          alias: holder.account.alias,
+          balance: parseInt(holder.balance) / DAO_TOKEN_DECIMALS,
+          transfersCount: holder.transfersCount,
+          firstTime: holder.firstTime,
+          lastTime: holder.lastTime,
+        }))
+      } catch (err) {
+        console.error('Failed to fetch token holders:', err)
+        throw err
+      }
+    },
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+    }
+  )
+
+  return { data, mutate, error, isLoading: !data && !error }
+}
+
+export function useFountainDonations(contractAddress, limit = 10000) {
+  const { data, mutate, error } = useSWR(
+    contractAddress
+      ? [`/contract-donations/${contractAddress}`, contractAddress, limit]
+      : null,
+    async () => {
+      const url = `${
+        import.meta.env.VITE_TZKT_API
+      }/v1/operations/transactions?target=${contractAddress}&select=sender,amount,timestamp&limit=${limit}&status=applied`
+
+      try {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`TzKT API error: ${res.statusText}`)
+        const transactions = await res.json()
+        return transactions
+      } catch (err) {
+        console.error('Failed to fetch contract donations:', err)
+        throw err
+      }
+    },
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+    }
+  )
+
+  return { data, mutate, error, isLoading: !data && !error }
+}
+
+export function useTopDonors(excludeAddresses = []) {
+  const { data, mutate, error } = useSWR(
+    [`/top-donators`, excludeAddresses.join(',')],
+    async () => {
+      // Fetch all donors
+      const url = `${
+        import.meta.env.VITE_TEIA_DONATION_API
+      }/top-donators?limit=1000`
+
+      try {
+        const res = await fetch(url)
+        if (!res.ok)
+          throw new Error(`Top donators API error: ${res.statusText}`)
+        const result = await res.json()
+
+        // Filter out excluded addresses & KT1 addresses
+        const excludeSet = new Set(excludeAddresses)
+        return result.donators.filter((donor) => {
+          const address = donor.donator_address
+          if (address?.startsWith('KT1')) return false
+          if (excludeSet.has(address)) return false
+          return true
+        })
+      } catch (err) {
+        console.error('Failed to fetch top donators:', err)
+        throw err
+      }
+    },
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+    }
+  )
+
+  return { data, mutate, error, isLoading: !data && !error }
+}
+
+const TEXT_POSTS_QUERY = gql`
+  ${BaseTokenFieldsFragment}
+  query TextPosts($limit: Int!) {
+    tokens(
+      where: {
+        _or: [
+          { mime_type: { _eq: "text/plain" } }
+          { mime_type: { _eq: "text/markdown" } }
+        ]
+        editions: { _gt: 0 }
+        metadata_status: { _eq: "processed" }
+        fa2_address: { _eq: "${HEN_CONTRACT_FA2}" }
+      }
+      order_by: { minted_at: desc }
+      limit: $limit
+    ) {
+      ...baseTokenFields
+    }
+  }
+`
+
+export function useTextPosts(limit = 100) {
+  return useSWR(
+    ['text-community'],
+    () =>
+      request(import.meta.env.VITE_TEIA_GRAPHQL_API, TEXT_POSTS_QUERY, {
+        limit,
+      }),
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      use: [laggy],
+    }
+  )
+}
+
+const TEXT_POSTS_BY_ARTIST_QUERY = gql`
+  ${BaseTokenFieldsFragment}
+  query TextPostsByArtist($address: String!) {
+    tokens(
+      where: {
+        artist_address: { _eq: $address }
+        _or: [
+          { mime_type: { _eq: "text/plain" } }
+          { mime_type: { _eq: "text/markdown" } }
+        ]
+        editions: { _gt: 0 }
+        metadata_status: { _eq: "processed" }
+        fa2_address: { _eq: "${HEN_CONTRACT_FA2}" }
+      }
+      order_by: { minted_at: desc }
+    ) {
+      ...baseTokenFields
+      listings(where: { status: { _eq: "active" } }, order_by: { price: asc }) {
+        seller_address
+      }
+      holdings(where: { amount: { _gt: "0" } }) {
+        holder_address
+        amount
+      }
+    }
+  }
+`
+
+export function useTextPostsByArtist(address) {
+  return useSWR(
+    address ? ['text-posts-by-artist', address] : null,
+    () =>
+      request(
+        import.meta.env.VITE_TEIA_GRAPHQL_API,
+        TEXT_POSTS_BY_ARTIST_QUERY,
+        { address }
+      ),
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      use: [laggy],
+    }
+  )
+}
+
+const OFFICIAL_TEXT_POSTS_QUERY = gql`
+  ${BaseTokenFieldsFragment}
+  query OfficialTextPosts($addresses: [String!], $tag: String!, $limit: Int!) {
+    tokens(
+      where: {
+        artist_address: { _in: $addresses }
+        tags: { tag: { _eq: $tag } }
+        _or: [
+          { mime_type: { _eq: "text/plain" } }
+          { mime_type: { _eq: "text/markdown" } }
+        ]
+        editions: { _gt: 0 }
+        metadata_status: { _eq: "processed" }
+        fa2_address: { _eq: "${HEN_CONTRACT_FA2}" }
+      }
+      order_by: { minted_at: desc }
+      limit: $limit
+    ) {
+      ...baseTokenFields
+    }
+  }
+`
+
+export function useMultisigAddresses() {
+  const { data } = useSWR(
+    `/v1/contracts/${DAO_TREASURY_CONTRACT}/storage?path=users`,
+    getTzktData,
+    { revalidateIfStale: false, revalidateOnFocus: false }
+  )
+  return data || []
+}
+
+export function useOfficialTextPosts(limit = 100) {
+  const multisigAddresses = useMultisigAddresses()
+  const { data: moderators } = useModerators()
+  const addresses = [...new Set([...multisigAddresses, ...(moderators || [])])]
+  return useSWR(
+    addresses.length > 0 ? ['text-official', addresses] : null,
+    () =>
+      request(
+        import.meta.env.VITE_TEIA_GRAPHQL_API,
+        OFFICIAL_TEXT_POSTS_QUERY,
+        {
+          addresses,
+          tag: TEIA_MULTISIG_BLOG_TAG,
+          limit,
+        }
+      ),
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      use: [laggy],
+    }
+  )
+}
+
+const USER_ACTIVITY_QUERY = gql`
+  query UserActivity(
+    $address: String!
+    $types: [String!]!
+    $mintTypes: [String!]!
+    $limit: Int!
+    $offset: Int!
+  ) {
+    events(
+      where: {
+        _or: [
+          {
+            # Trades, listings and transfers the user is a direct party to.
+            _and: [
+              {
+                _or: [
+                  { seller_address: { _eq: $address } }
+                  { buyer_address: { _eq: $address } }
+                  { from_address: { _eq: $address } }
+                  { to_address: { _eq: $address } }
+                ]
+              }
+              {
+                _or: [
+                  { implements: { _eq: "SALE" } }
+                  { type: { _in: $types } }
+                ]
+              }
+            ]
+          }
+          {
+            # Mints — the user is identified by artist_address, not by any of
+            # the trade/transfer address fields (which are null on a mint).
+            _and: [
+              { artist_address: { _eq: $address } }
+              { type: { _in: $mintTypes } }
+            ]
+          }
+        ]
+      }
+      order_by: [{ level: desc }, { opid: desc }]
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      timestamp
+      ophash
+      implements
+      type
+      price
+      amount
+      editions
+      seller_address
+      seller_profile {
+        name
+      }
+      buyer_address
+      buyer_profile {
+        name
+      }
+      from_address
+      from_profile {
+        name
+      }
+      to_address
+      to_profile {
+        name
+      }
+      token {
+        token_id
+        fa2_address
+        name
+        display_uri
+        thumbnail_uri
+        mime_type
+        artist_address
+        artist_profile {
+          name
+        }
+      }
+    }
+  }
+`
+
+const ACTIVITY_PAGE_SIZE = 50
+
+/**
+ * Paginated activity feed (sales, purchases, listings, transfers, mints) for a
+ * single address, newest first. Uses SWR infinite for "load more" paging.
+ * Note: events are pre-filtered to the relevant types here; category resolution
+ * and chip filtering happen client-side in the Activity tab.
+ */
+export function useUserActivity(address) {
+  const getKey = (pageIndex, previousPageData) => {
+    if (!address) return null
+    if (previousPageData && previousPageData.length === 0) return null
+    return ['user-activity', address, pageIndex]
+  }
+
+  const { data, error, size, setSize, isValidating } = useSWRInfinite(
+    getKey,
+    // SWR v1 spreads array-key parts as separate fetcher args.
+    async (_ns, addr, pageIndex) => {
+      const res = await request(
+        import.meta.env.VITE_TEIA_GRAPHQL_API,
+        USER_ACTIVITY_QUERY,
+        {
+          address: addr,
+          types: ACTIVITY_EVENT_TYPES,
+          mintTypes: MINT_TYPES,
+          limit: ACTIVITY_PAGE_SIZE,
+          offset: pageIndex * ACTIVITY_PAGE_SIZE,
+        }
+      )
+      return res.events || []
+    },
+    { revalidateFirstPage: false, revalidateOnFocus: false }
+  )
+
+  const events = data ? data.flat() : []
+  const isLoadingInitial = !data && !error
+  const isLoadingMore =
+    isValidating && data && typeof data[size - 1] === 'undefined'
+  const isReachingEnd =
+    error || (data && data[data.length - 1]?.length < ACTIVITY_PAGE_SIZE)
+
+  return {
+    events,
+    error,
+    isLoadingInitial,
+    isLoadingMore,
+    isReachingEnd,
+    loadMore: () => setSize(size + 1),
+  }
+}
+
+const GLOBAL_ACTIVITY_QUERY = gql`
+  query GlobalActivity($types: [String!]!, $limit: Int!, $offset: Int!) {
+    events(
+      where: {
+        token: { metadata_status: { _eq: "processed" } }
+        fa2_address: { _eq: "${HEN_CONTRACT_FA2}" }
+        _or: [
+          { implements: { _eq: "SALE" } }
+          { type: { _in: $types } }
+        ]
+      }
+      order_by: [{ level: desc }, { opid: desc }]
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      timestamp
+      ophash
+      implements
+      type
+      price
+      amount
+      editions
+      seller_address
+      seller_profile {
+        name
+      }
+      buyer_address
+      buyer_profile {
+        name
+      }
+      from_address
+      from_profile {
+        name
+      }
+      to_address
+      to_profile {
+        name
+      }
+      token {
+        token_id
+        fa2_address
+        name
+        display_uri
+        thumbnail_uri
+        mime_type
+        artist_address
+        artist_profile {
+          name
+        }
+      }
+    }
+  }
+`
+
+const GLOBAL_FEED_TYPES = [...MINT_TYPES, ...TEIA_LISTING_TYPES]
+
+/**
+ * Platform-wide Teia/HEN activity feed (sales, listings, mints), newest first,
+ * with "load more" paging. Not scoped to any address.
+ */
+export function useGlobalActivity() {
+  const getKey = (pageIndex, previousPageData) => {
+    if (previousPageData && previousPageData.length === 0) return null
+    return ['global-activity', pageIndex]
+  }
+
+  const { data, error, size, setSize, isValidating } = useSWRInfinite(
+    getKey,
+    // SWR v1 spreads array-key parts as separate fetcher args.
+    async (_ns, pageIndex) => {
+      const res = await request(
+        import.meta.env.VITE_TEIA_GRAPHQL_API,
+        GLOBAL_ACTIVITY_QUERY,
+        {
+          types: GLOBAL_FEED_TYPES,
+          limit: ACTIVITY_PAGE_SIZE,
+          offset: pageIndex * ACTIVITY_PAGE_SIZE,
+        }
+      )
+      return res.events || []
+    },
+    { revalidateFirstPage: false, revalidateOnFocus: false }
+  )
+
+  const events = data ? data.flat() : []
+  const isLoadingInitial = !data && !error
+  const isLoadingMore =
+    isValidating && data && typeof data[size - 1] === 'undefined'
+  const isReachingEnd =
+    error || (data && data[data.length - 1]?.length < ACTIVITY_PAGE_SIZE)
+
+  return {
+    events,
+    error,
+    isLoadingInitial,
+    isLoadingMore,
+    isReachingEnd,
+    loadMore: () => setSize(size + 1),
+  }
 }

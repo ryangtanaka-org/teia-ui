@@ -1,4 +1,5 @@
 // ! NOTE - Keep the comments.
+import { Fragment } from 'react'
 import { motion } from 'framer-motion'
 import styles from '@style'
 import { DropDown, DropdownButton } from '@atoms/dropdown'
@@ -11,6 +12,7 @@ import { useLocalSettings } from '@context/localSettingsStore'
 import { useLocation, useNavigate } from 'react-router'
 import { Line } from '@atoms/line'
 import { shallow } from 'zustand/shallow'
+import { useUserStore } from '@context/userStore'
 import { DEFAULT_START_FEED } from '@constants'
 
 // const MediaFilter = ({ label, tagline }) => {
@@ -23,12 +25,14 @@ import { DEFAULT_START_FEED } from '@constants'
 // }
 
 const locationMap = new Map([
+  ['---sort_feeds', 'Sort Feeds'],
   ['/feed/sales', 'Recent Sales'],
   ['/feed/random', 'Random'],
   ['/feed/newobjkts', 'New OBJKTs'],
   ['/feed/friends', 'Friends'],
   // separator
-  ['---fund_feeds', 'fund_feeds'],
+  ['---fund_feeds', 'Event Feeds'],
+  ['/feed/art4artists', 'Art4Artists'],
   ['/feed/tez4pal', '🇵🇸 Tez4Pal'],
   ['/feed/morocco-quake-aid', '🇲🇦 Quake Aid'],
   ['/feed/quake-aid', '🇹🇷🇸🇾 Quake Aid'],
@@ -37,12 +41,12 @@ const locationMap = new Map([
   ['/feed/iran', '🇮🇷 Iran'],
   ['/feed/tezospride', '🏳️‍🌈 Tezospride'],
   // separator
-  ['---mime_feeds', 'mime_feeds'],
+  ['---mime_feeds', 'By Format'],
   ['/feed/image', 'Image'],
   ['/feed/video', 'Video'],
   ['/feed/audio', 'Audio'],
   ['/feed/glb', '3D'],
-  ['/feed/html-svg', 'HTML & SVG'],
+  ['/feed/html-svg', 'Code Art'],
   ['/feed/gif', 'GIF'],
   ['/feed/pdf', 'PDF'],
   ['/feed/md', 'Markdown'],
@@ -61,9 +65,11 @@ export const FeedToolbar = ({ feeds_menu = false }) => {
   )
   const location = useLocation()
   const feedLabel =
-    locationMap.get(location.pathname) || startFeed || DEFAULT_START_FEED
-
+    locationMap.get('/' + location.pathname.split('/').slice(1, 3).join('/')) ||
+    startFeed ||
+    DEFAULT_START_FEED
   const navigate = useNavigate()
+  const walletAddress = useUserStore((st) => [st.address], shallow)
 
   // TODO: finish the filtering logic
   // const filters = false
@@ -82,7 +88,14 @@ export const FeedToolbar = ({ feeds_menu = false }) => {
               <div className={styles.feeds_button}>
                 {[...locationMap.keys()].map((k) => {
                   if (k.startsWith('-')) {
-                    return <Line className={styles.separator} key={k} />
+                    return (
+                      <Fragment key={k}>
+                        <Line className={styles.separator} />
+                        <span className={styles.subtitle}>
+                          {locationMap.get(k)}
+                        </span>
+                      </Fragment>
+                    )
                   }
                   if (locationNeedSync.includes(k)) {
                     return (

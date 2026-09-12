@@ -2,6 +2,12 @@ import { flipObject } from './utils'
 
 export const BANNER_URL = 'https://lists.teia.art/teia-status'
 
+/** TzKT avatar service base, append `/{address}` for a baker or any account image. */
+export const TZKT_AVATARS_URL = 'https://services.tzkt.io/v1/avatars'
+
+/** Baking Bad bakers registry. */
+export const BAKING_BAD_BAKERS_API = 'https://api.baking-bad.org/v3/bakers'
+
 export const PATH = {
   FEED: '/',
   ISSUER: '/tz',
@@ -10,9 +16,13 @@ export const PATH = {
   FAQ: '/faq',
   CLAIM: '/claim',
   DAO: '/dao',
+  COPYRIGHT: '/copyright',
   PROPOSAL: '/proposal',
   POLLS: '/polls',
   POLL: '/poll',
+  WIKI: '/wiki',
+  CURATIONS: '/curations',
+  CODE_OF_CONDUCT: '/codeofconduct',
   SYNC: '/sync',
   MINT: '/mint',
   OBJKT: '/objkt',
@@ -35,7 +45,7 @@ export const MIMETYPE: { [key: string]: string } = {
   MID: 'audio/mid',
   MP3: 'audio/mpeg',
   MP4: 'video/mp4',
-  OGA: 'audio/ogg',
+  OGG: 'audio/ogg',
   OGV: 'video/ogg',
   PDF: 'application/pdf',
   PNG: 'image/png',
@@ -52,6 +62,14 @@ export const MIMETYPE: { [key: string]: string } = {
   TXT: 'text/plain',
 }
 
+export const AUDIO_MIME_TYPES = [
+  'audio/mpeg',
+  'audio/wav',
+  'audio/flac',
+  'audio/x-flac',
+  'audio/ogg',
+]
+
 export const ALLOWED_MIMETYPES = Object.keys(MIMETYPE)
   .map((k) => MIMETYPE[k])
   // disabling GLTF from new updates,
@@ -65,7 +83,6 @@ export const ALLOWED_FILETYPES_LABEL = Object.entries(MIMETYPE)
       ![
         'ZIP1',
         'ZIP2',
-        'OGA',
         'OGV',
         'BMP',
         'TIFF',
@@ -89,11 +106,12 @@ export const FEED_LIST = [
   '🇵🇰 Pakistan',
   '🇮🇷 Iran',
   '🏳️‍🌈 Tezospride',
+  'Art4Artists',
   'Image',
   'Video',
   'Audio',
   '3D',
-  'HTML & SVG',
+  'Code Art',
   'GIF',
   'PDF',
   'Markdown',
@@ -101,7 +119,7 @@ export const FEED_LIST = [
 
 export type FeedType = (typeof FEED_LIST)[number]
 
-export const DEFAULT_START_FEED: FeedType = 'Recent Sales'
+export const DEFAULT_START_FEED: FeedType = 'New OBJKTs'
 
 //- Mint stuff
 
@@ -109,7 +127,6 @@ export const ALLOWED_COVER_MIMETYPES = [
   MIMETYPE.JPEG,
   MIMETYPE.PNG,
   MIMETYPE.GIF,
-  MIMETYPE.MP4,
 ]
 
 export const AUTO_GENERATE_COVER_MIMETYPES = [
@@ -118,7 +135,7 @@ export const AUTO_GENERATE_COVER_MIMETYPES = [
   'audio/mid'
 ]
 
-export const ALLOWED_COVER_FILETYPES_LABEL = 'jpeg, png, gif, mp4'
+export const ALLOWED_COVER_FILETYPES_LABEL = 'jpeg, png, gif'
 export const MAX_EDITIONS = 10000 // Limited by contract
 export const MIN_ROYALTIES = 10
 export const MAX_ROYALTIES = 25
@@ -148,18 +165,60 @@ export const MARKETPLACE_CONTRACTS_TO_NAME = flipObject(
 )
 
 export const HEN_CONTRACT_FA2 = 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton'
-
+export const ART4ARTISTS_BREADFOND_CONTRACT = 'KT1LgnHXu8NVa674xJhSFhnKjrn7v2ZMsu2a'
 export const TEZ4PAL_FUNDING_ADDRESS = 'tz2TfuukrHVoeUqFvcRViPJ2VqL7nEQi7xgW'
 export const UKRAINE_FUNDING_CONTRACT = 'KT1DWnLiUkNtAQDErXxudFEH63JC6mqg3HEx'
 export const PAKISTAN_FUNDING_CONTRACT = 'KT1Jpf2TAcZS7QfBraQMBeCxjFhH6kAdDL4z'
 export const IRAN_FUNDING_CONTRACT = 'KT1KYfj97fpdomqyKsZSBdSVvh9afh93b4Ge'
 export const QUAKE_FUNDING_CONTRACT = 'KT1X1jyohFrZyDYWvCPXw9KvWxk2VDwxyg2g'
+export const COPYRIGHT_CONTRACT = 'KT1XAiMoaddkmLUhMYMrc3ghm9uBdLgVbiFK'
 export const MOROCCO_QUAKE_FUNDING_CONTRACT =
   'KT1RwXEP8Sj1UQDHPG4oEjRohBdzG2R7FCpA'
 
 export const POLLS_CONTRACT = 'KT1SUExZfkmxf2fafrVgYjZGEKDete2siWoU'
 export const DAO_GOVERNANCE_CONTRACT = 'KT1GHX73W5BcjbYRSZSrUJcnZE3Uw92VYF66'
+export const DAO_TREASURY_CONTRACT = 'KT1J9FYz29RBQi1oGLw8uXyACrzXzV1dHuvb'
+export const TEIA_FOUNTAIN_CONTRACT = 'KT1EsvmkijLKPQmcJMbjDeKRXdwky1LWvwpG'
 export const DAO_TOKEN_CONTRACT = 'KT1QrtA753MSv8VGxkDrKKyJniG5JtuHHbtV'
+
+// Moderator Contract.
+export const MODERATOR_CONTRACT = 'KT1RbVvb4eZh618krF49abrpEmAdb3zK92v6'
+export const WIKI_TOKEN_ID = 0
+
+// --- Wiki ---
+// teia-smart-contracts/python/contracts/wiki/wiki.py
+export const WIKI_CONTRACT = 'KT1UW3BnYemVjA4HggNZeR4wq2eKbVvpq15Y'
+// page_id of the curated landing page (Table of Contents) shown at /wiki, or
+// null to fall back to an auto-generated list of top-level pages.
+export const WIKI_INDEX_PAGE_ID: number | null = null
+
+// --- Curations ---
+export const CURATIONS_CONTRACT = 'KT18mrZB2k5PbWsY55dvLJatqgT4evVehLPC'
+// Old Contract used for the migration.
+export const CURATIONS_OLD_CONTRACT = 'KT1NdDcfE1mzAc6nYgV5psGcK3L86FqogKVq'
+export const CURATION_CREATE_FEE = 100_000
+export const CURATION_EDIT_FEE = 50_000
+
+export const QUIPUSWAP_TEIA_URL = `https://quipuswap.com/swap/tez-${DAO_TOKEN_CONTRACT}_0`
+
+// Specific tz addresses to exclude from donation lists
+export const DONATION_EXCLUDED_ADDRESSES = [
+  'tz1cyUSeLA9Zpf2yGncQFFFNpMBgkrvgz7KQ', // Zir0h's bakery payouts
+  'tz1gnuBF9TbBcgHPV2mUE96tBrW7PxqRmx1h', // Baking Benjamins Payouts
+]
+
+// Donations that were sent via a middleman and should be reassigned to the actual donor.
+// Each entry moves `amount` tez and 1 donation count from `from` to `to`.
+export const DONATION_REASSIGNMENTS = [
+  {
+    // Tezos Foundation donation sent via Ryan Tanaka
+    // tx: ooKskSzgUPDq32uo757BuEGzhNF6Ks8nSRGFst8iQgtHi2z2hPz
+    from: 'tz1ZVzMVj6EjRoDNFMCguG7nGdqmD7aau9kS',
+    to: 'tz1Sb4KVyoe4zVpwdFH5R1U822hUWqGEMDWE',
+    toAlias: 'Tezos Foundation',
+    amount: 25481.22,
+  },
+]
 export const DAO_TOKEN_CLAIM_CONTRACT = 'KT1NrfV4e2qWqFrnrKyPTJth5wq2KP9VyBei'
 export const DISTRIBUTION_MAPPING_IPFS_PATH =
   'QmbRmck8A5sBYQC7WEuK8dApnGQGXBhyPEgQpLm8ftfAtL'
@@ -216,6 +275,27 @@ export const SWAP_TYPE_HEN = 'HEN'
 export const MAIN_MARKETPLACE_CONTRACT = MARKETPLACE_CONTRACT_TEIA // the one that is used for swapping
 export const MAIN_MARKETPLACE_CONTRACT_SWAP_TYPE = SWAP_TYPE_TEIA
 
+export const TEIA_MULTISIG_BLOG_TAG = 'teiamultisigblog'
+
+// The deployed on-chain teiaCalendar contract (mainnet). Source of truth for
+// the client read-path. The .ics feed function (functions/calendar-feed.mjs)
+// keeps its own copy of this literal, since a Netlify function can't import
+// this TS module.
+export const CALENDAR_CONTRACT = 'KT1FxyjsMjNiske7KZQhRtcbTwWJQpv8bmLw'
+
+export const POLL_COMMENTS_CONTRACT = 'KT1FrjJUWKXpJ9nQaNJcwjqCkjMsCcYU5y9o'
+export const POLL_MESSAGE_FEE = 25000
+
+export const TOKEN_COMMENTS_CONTRACT = 'KT1FXFxUcZvne1ApoSaeZfvmDR73u2BsuFUP'
+export const TOKEN_MESSAGE_FEE = 25000
+
+export const CHANNELS_V2_CONTRACT = 'KT19ooSLPFxJQ5mx3kR4Qo2UY4KJDcdMdng9'
+export const CHANNEL_FEE = 100000
+export const CHANNEL_MESSAGE_FEE = 25000
+
+// Collections DAO fee percentage
+export const COLLECTIONS_DAO_FEE_PERCENT = 2
+
 export const BURN_ADDRESS = 'tz1burnburnburnburnburnburnburjAYjjX'
 
 export const COVER_COMPRESSOR_OPTIONS = {
@@ -238,7 +318,6 @@ export const LICENSE_TYPES: { [key: string]: string } = {
   'cc-by-nc-4.0': 'CC BY-NC 4.0 (Attribution-NonCommercial)',
   'cc-by-nc-sa-4.0': 'CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike)',
   'cc-by-nc-nd-4.0': 'CC BY-NC-ND 4.0 (Attribution-NonCommercial-NoDerivs)',
-  custom: 'Custom License',
 }
 
 export const LICENSE_TYPES_OPTIONS = Object.keys(LICENSE_TYPES).map((k) => ({
@@ -419,6 +498,10 @@ export const TabIndex = {
 // TODO - get this manageable on-chain
 export const ossProjects = [
   {
+    name: 'Art4Artists Breadfond',
+    address: 'KT1LgnHXu8NVa674xJhSFhnKjrn7v2ZMsu2a',
+  },
+  {
     name: 'Tez4Pal Fundraiser',
     address: 'tz2TfuukrHVoeUqFvcRViPJ2VqL7nEQi7xgW',
   },
@@ -503,3 +586,8 @@ export const teiaSwapSchema = `
 export const teiaCancelSwapSchema = `
 (pair (address %marketplaceAddress) (nat %swap_id))
 `
+
+export const FILTER_ALL = 'ALL'
+export const FILTER_PRIMARY = 'PRIMARY'
+export const FILTER_SECONDARY = 'SECONDARY'
+export const FILTER_NOT_FOR_SALE = 'NOT_FOR_SALE'

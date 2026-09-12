@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { bytes2Char } from '@taquito/utils'
+import { bytesToString } from '@taquito/utils'
 import { PATH, POLLS_CONTRACT, DAO_TOKEN_DECIMALS } from '@constants'
 import { useUserStore } from '@context/userStore'
 import { usePollsStore } from '@context/pollsStore'
@@ -15,6 +15,7 @@ import {
   usePollsUsersAliases,
   useObjkt,
 } from '@data/swr'
+import { useAllPollCommentCounts } from '@data/messaging/poll-comments'
 import { getWordDate } from '@utils/time'
 import styles from '@style'
 
@@ -33,6 +34,9 @@ export default function Poll({ pollId }) {
 
   // Get all the relevant users aliases
   const [usersAliases] = usePollsUsersAliases(userAddress, polls)
+
+  // Get Comment Count
+  const { data: commentCounts } = useAllPollCommentCounts()
 
   // Return if we are missing important information
   if (!polls) {
@@ -62,10 +66,14 @@ export default function Poll({ pollId }) {
         >
           #{pollId}
         </Link>
-        {bytes2Char(poll.question)}
+        {bytesToString(poll.question)}
       </h3>
 
-      <PollDescription poll={poll} aliases={usersAliases} />
+      <PollDescription
+        poll={poll}
+        aliases={usersAliases}
+        commentCount={commentCounts?.[pollId] ?? 0}
+      />
 
       <PollVotesSummary
         poll={poll}
@@ -80,11 +88,13 @@ export default function Poll({ pollId }) {
   )
 }
 
-function PollDescription({ poll, aliases }) {
+function PollDescription({ poll, aliases, commentCount }) {
   // Try to extract an ipfs cid from the poll description
   const description =
-    poll.description !== '' ? bytes2Char(poll.description) : ''
+    poll.description !== '' ? bytesToString(poll.description) : ''
   const cid = description.split('//')[1]
+
+  // We are replaying our discourse system.
 
   return (
     <>
@@ -112,6 +122,8 @@ function PollDescription({ poll, aliases }) {
         Vote weight method:{' '}
         {Object.keys(poll.vote_weight_method)[0].toUpperCase()}
       </p>
+
+      <p>Comments: {commentCount}</p>
     </>
   )
 }
@@ -152,11 +164,11 @@ function PollVotesSummary({ poll, userVotedOption, canVote, callback }) {
               {userVotedOption === option ? (
                 <div className={styles.poll_option_container}>
                   <span className={styles.user_vote}></span>
-                  <PollOption option={bytes2Char(poll.options[option])} />
+                  <PollOption option={bytesToString(poll.options[option])} />
                   <span className={styles.user_vote}>{'\u2714'}</span>
                 </div>
               ) : (
-                <PollOption option={bytes2Char(poll.options[option])} />
+                <PollOption option={bytesToString(poll.options[option])} />
               )}
               <div>
                 {showPercents

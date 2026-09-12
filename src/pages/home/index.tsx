@@ -21,6 +21,7 @@ type FeedComponentMap = {
 
 export const feedComponentMap: FeedComponentMap = {
   'Recent Sales': FEEDS.RecentSalesFeed,
+  'Art4Artists': FEEDS.Art4ArtistsFeed,
   '🏳️‍🌈 Tezospride': FEEDS.TagFeed as FunctionComponent<Record<string, unknown>>,
   '🇮🇷 Iran': FEEDS.IranFeed,
   'Quake Aid': FEEDS.QuakeFeed,
@@ -33,7 +34,7 @@ export const feedComponentMap: FeedComponentMap = {
   Video: FEEDS.VideoFeed,
   Image: FEEDS.ImageFeed,
   Audio: FEEDS.AudioFeed,
-  'HTML & SVG': FEEDS.HtmlSvgFeed,
+  'Code Art': FEEDS.HtmlSvgFeed,
   PDF: FEEDS.PdfFeed,
   Markdown: FEEDS.MarkdownFeed,
   GIF: FEEDS.GifFeed,
@@ -54,7 +55,7 @@ export function Home({ isSearch = false }) {
         {isSearch && (
           <Input
             type="text"
-            name="search"
+            name="Enter a search term and press enter:"
             onChange={(value) => {
               setSearchTerm(value as string)
             }}
@@ -83,7 +84,7 @@ export function Home({ isSearch = false }) {
         searchParams.get('term') ? (
           <FEEDS.SearchFeed />
         ) : (
-          <h1>Enter a search term</h1>
+          <></>
         )
       ) : (
         outlet || <FeedComponent />

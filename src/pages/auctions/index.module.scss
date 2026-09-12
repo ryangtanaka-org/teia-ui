@@ -1,0 +1,466 @@
+@import '@styles/variables.scss';
+
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5em 2em 4em;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8em;
+  margin-bottom: 1em;
+  flex-wrap: wrap;
+}
+
+.headline {
+  margin: 0;
+}
+
+.headerLink,
+.inlineLink {
+  font-size: $font-small;
+  text-decoration: underline;
+  color: inherit;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.headerLink {
+  margin-left: auto;
+}
+
+.prototypeNote {
+  margin: 0 0 1.5em;
+  padding: 0.85em 1em;
+  border-radius: 8px;
+  background-color: var(--gray-5);
+  border: 1px solid var(--gray-10);
+  font-size: $font-small;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+/* Mirrors the chips on the Activity feed so filters look the same site-wide. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5em;
+}
+
+.chip {
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 200ms ease;
+
+  &:hover {
+    background: var(--border-color);
+  }
+}
+
+.chip_active {
+  background: var(--text-color);
+  color: var(--background-color);
+  border-color: var(--text-color);
+}
+
+/* --- lots ------------------------------------------------------------- */
+
+.lots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--gray-10);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lot {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  padding: 1em;
+
+  & + & {
+    border-top: 1px solid var(--gray-10);
+  }
+
+  &:hover {
+    background-color: var(--gray-5);
+  }
+
+  @media (max-width: 800px) {
+    flex-wrap: wrap;
+  }
+}
+
+.lotCover {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  background-color: var(--gray-10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.coverFallback {
+  font-size: $font-xsmall;
+  font-weight: bold;
+  opacity: 0.6;
+}
+
+.lotBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+}
+
+.lotHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  flex-wrap: wrap;
+}
+
+.lotName {
+  font-weight: bold;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.lotArtist {
+  font-size: $font-small;
+  opacity: 0.65;
+}
+
+.lotStats {
+  display: flex;
+  gap: 1.75em;
+  margin: 0;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1em;
+  }
+
+  dt {
+    font-size: $font-xsmall;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.55;
+  }
+
+  dd {
+    margin: 0;
+    font-size: $font-small;
+  }
+}
+
+.price {
+  font-weight: bold;
+}
+
+.remaining {
+  font-variant-numeric: tabular-nums;
+}
+
+.lotFoot {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  flex-wrap: wrap;
+  font-size: $font-xsmall;
+}
+
+.license {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+}
+
+.tagTop,
+.tagOutbid,
+.tagSettled {
+  padding: 0.15em 0.5em;
+  border: 1px solid var(--gray-20);
+  border-radius: 3px;
+  opacity: 0.85;
+}
+
+.tagTop {
+  border-color: var(--text-color);
+  font-weight: bold;
+}
+
+.tagOutbid {
+  border-style: dashed;
+}
+
+.lotAction {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35em;
+  text-align: right;
+}
+
+.feeNote,
+.endedNote {
+  font-size: $font-xsmall;
+  opacity: 0.55;
+  max-width: 12em;
+}
+
+/* --- notification preferences ----------------------------------------- */
+
+.prefs {
+  margin-bottom: 1.5em;
+  border: 1px solid var(--gray-10);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.prefsToggle {
+  width: 100%;
+  padding: 0.75em 1em;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-size: $font-small;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--gray-5);
+    opacity: 1;
+  }
+}
+
+.prefsList {
+  border-top: 1px solid var(--gray-10);
+  padding: 0.5em 1em 1em;
+}
+
+.prefRow {
+  padding: 0.5em 0;
+
+  & + & {
+    border-top: 1px solid var(--gray-5);
+  }
+}
+
+.prefHint {
+  display: block;
+  font-size: $font-xsmall;
+  opacity: 0.55;
+  padding-left: 1.9em;
+}
+
+.prefFlag {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  border: 1px solid var(--gray-20);
+  border-radius: 3px;
+  padding: 0 0.35em;
+  margin-left: 0.4em;
+}
+
+/* --- activity rows ---------------------------------------------------- */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--gray-10);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.85em;
+  padding: 0.85em 1em 0.85em 1.75em;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--gray-5);
+  }
+}
+
+.list li + li .row {
+  border-top: 1px solid var(--gray-10);
+}
+
+.read {
+  opacity: 0.55;
+
+  .rowTitle {
+    font-weight: normal;
+  }
+}
+
+.unreadDot {
+  position: absolute;
+  left: 0.7em;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--text-color);
+  pointer-events: none;
+}
+
+.thumb,
+.thumbFallback {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  background-color: var(--gray-10);
+  object-fit: cover;
+}
+
+.thumbFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xsmall;
+  font-weight: bold;
+  overflow: hidden;
+}
+
+.rowBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.15em;
+}
+
+.rowTitle {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowSub {
+  font-size: $font-small;
+  opacity: 0.65;
+}
+
+.rowTime {
+  margin-left: auto;
+  padding-left: 0.75em;
+  font-size: $font-xsmall;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.mutedNote {
+  margin: 1em 0 0;
+  font-size: $font-small;
+  opacity: 0.6;
+}
+
+.empty {
+  padding: 3em 0;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.footNote {
+  margin-top: 2em;
+}
+
+/* --- bid sheet -------------------------------------------------------- */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5em;
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+.sheetInner {
+  width: 100%;
+  max-width: 30em;
+  padding: 1.5em;
+  border: 1px solid var(--gray-20);
+  border-radius: 8px;
+  background-color: var(--background-color);
+}
+
+.sheetTitle {
+  margin: 0 0 0.75em;
+  font-size: $font-large;
+}
+
+.sheetBody {
+  margin: 0 0 1em;
+  font-size: $font-small;
+  line-height: 1.5;
+}
+
+.sheetWarn {
+  margin: 0 0 1.5em;
+  padding: 0.85em 1em;
+  border-radius: 8px;
+  background-color: var(--gray-5);
+  border: 1px solid var(--gray-10);
+  font-size: $font-small;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+.sheetActions {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  flex-wrap: wrap;
+}

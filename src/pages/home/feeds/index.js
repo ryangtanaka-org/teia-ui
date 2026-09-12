@@ -19,9 +19,11 @@ export {
   QuakeFeed,
   MoroccoQuakeFeed,
   Tez4PalFeed,
+  Art4ArtistsFeed,
 } from './fund-feeds'
 export { FriendsFeed } from './friends-feed'
 export { RandomFeed } from './random-feed'
 export { RecentSalesFeed } from './recent-sales-feed'
+export { GlobalActivityFeed } from './teia-activity-feed'
 export { SearchFeed } from './search-feed'
 export { TagFeed } from './tag-feed'
