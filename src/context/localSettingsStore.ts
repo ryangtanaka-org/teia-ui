@@ -39,6 +39,9 @@ interface LocalSettingsState {
   getRpcNode: () => RPC_NODES | string
   customRpcNode: string
   messageNotifications: boolean
+  /** PROTOTYPE (poll #56): per-category auction notification switches. */
+  auctionNotifications: Record<string, boolean>
+  setAuctionNotification: (key: string, v: boolean) => void
   setCustomRpcNode: (v: string) => void
   setMessageNotifications: (v: boolean) => void
   setNsfwFriendly: (v: boolean) => void
@@ -82,6 +85,15 @@ const defaultValues = {
   imgproxy: true,
   has_seen_banner: false,
   messageNotifications: true,
+  // Poll #56 commenters named objkt's "new auction" firehose as the reason
+  // its notifications are unusable, so that one starts off.
+  auctionNotifications: {
+    outbid: true,
+    ending: true,
+    bidOnYours: true,
+    settled: true,
+    newAuction: false,
+  } as Record<string, boolean>,
 }
 // TODO: replace all the "set" methods with one that merges the state with the provided partial object
 export const useLocalSettings = create<LocalSettingsState>()(
@@ -92,6 +104,10 @@ export const useLocalSettings = create<LocalSettingsState>()(
         setHasSeenBanner: (has_seen_banner) => set({ has_seen_banner }),
         setMessageNotifications: (messageNotifications) =>
           set({ messageNotifications }),
+        setAuctionNotification: (key, v) =>
+          set((state) => ({
+            auctionNotifications: { ...state.auctionNotifications, [key]: v },
+          })),
         setTilted: (tilted) => set({ tilted }),
         setImgproxy: (imgproxy) => set({ imgproxy }),
         toggleViewMode: () =>

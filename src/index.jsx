@@ -95,6 +95,8 @@ import ProfileCurations from '@pages/profile/curations'
 
 // Messaging
 import NotificationsCenter from '@pages/notifications'
+import Auctions from '@pages/auctions'
+import AuctionActivity from '@pages/auctions/Activity'
 import ChannelList from '@components/channels/ChannelList'
 import ChannelView from '@components/channels/ChannelView'
 import CreateChannel from '@components/channels/CreateChannel'
@@ -277,6 +279,8 @@ const router = createBrowserRouter(
         <Route path="curations/:id/edit" element={<CurationEditor />} />
         <Route path="publicchannels" element={<ChannelList />} />
         <Route path="notifications" element={<NotificationsCenter />} />
+        <Route path="auctions" element={<Auctions />} />
+        <Route path="auctions/activity" element={<AuctionActivity />} />
         <Route path="inbox/channels" element={<ChannelList />} />
         <Route path="inbox/channels/create" element={<CreateChannel />} />
         <Route path="inbox/channels/:id" element={<ChannelView />} />

@@ -1,0 +1,45 @@
+@import '@styles/variables.scss';
+
+/* Keep the fixed bar from covering the footer on every page. */
+:global(body) {
+  padding-bottom: 3.5em;
+}
+
+.banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  flex-wrap: wrap;
+  padding: 0.5em 1em;
+  background-color: var(--text-color);
+  color: var(--background-color);
+  font-size: $font-xsmall;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.tag {
+  padding: 0.1em 0.5em;
+  border: 1px solid var(--background-color);
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.text {
+  opacity: 0.95;
+}
+
+.link {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: bold;
+}

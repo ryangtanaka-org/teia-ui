@@ -163,6 +163,15 @@ export const MainMenu = () => {
       ],
     },
     {
+      // PROTOTYPE (poll #56) — remove with the rest of the auctions mock if
+      // the community votes this down.
+      title: 'Auctions',
+      items: [
+        { label: 'Live Auctions', route: 'auctions' },
+        { label: 'Auction Activity', route: 'auctions/activity' },
+      ],
+    },
+    {
       title: 'Community & DAO',
       items: [
         { label: 'Public Channels', route: 'publicchannels' },

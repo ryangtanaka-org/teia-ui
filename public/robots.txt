@@ -1,6 +1,4 @@
-Sitemap: https://backup.teia.art/sitemap.php
+# Unofficial auctions prototype for Teia poll #56 — not the real teia.art.
+# Kept out of search results so it can never be mistaken for the live site.
 User-Agent: *
-Disallow: /settings
-Disallow: /subjkt
-Disallow: /sync
-Disallow: /feed/lists
+Disallow: /
