@@ -79,3 +79,26 @@ export const OFFICIAL_TEXT_POSTS_QUERY = gql`
     }
   }
 `
+
+/** TEIA Members: posts from current TEIA token holders. */
+export const HOLDER_TEXT_POSTS_QUERY = gql`
+  ${BaseTokenFieldsFragment}
+  query HolderTextPosts($addresses: [String!], $limit: Int!) {
+    tokens(
+      where: {
+        artist_address: { _in: $addresses }
+        _or: [
+          { mime_type: { _eq: "text/plain" } }
+          { mime_type: { _eq: "text/markdown" } }
+        ]
+        editions: { _gt: 0 }
+        metadata_status: { _eq: "processed" }
+        fa2_address: { _eq: "${HEN_CONTRACT_FA2}" }
+      }
+      order_by: { minted_at: desc }
+      limit: $limit
+    ) {
+      ...baseTokenFields
+    }
+  }
+`
