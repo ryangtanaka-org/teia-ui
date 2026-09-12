@@ -1,4 +1,4 @@
-import { useOfficialTextPosts } from '@data/swr'
+import { useOfficialTextPosts } from '@data/text'
 import { Container } from '@atoms/layout'
 import { Loading } from '@atoms/loading'
 import { TextPostCard } from '../../components/text/TextPostCard'
