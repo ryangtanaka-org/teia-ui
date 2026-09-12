@@ -2,6 +2,7 @@ import { useHolderTextPosts } from '@data/text'
 import { Container } from '@atoms/layout'
 import { Loading } from '@atoms/loading'
 import { TextPostCard } from '../../components/text/TextPostCard'
+import { RoleLegend } from '@components/user-badges'
 import styles from '@style'
 
 export default function MemberPosts() {
@@ -33,6 +34,7 @@ export default function MemberPosts() {
     <>
       <p className={styles.description}>
         Posts from members who currently hold TEIA tokens.
+        <RoleLegend className={styles.legend} />
       </p>
       <div className={styles.posts_list}>
         {posts.map((nft) => (

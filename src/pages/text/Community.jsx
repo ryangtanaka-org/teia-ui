@@ -2,6 +2,7 @@ import { useTextPosts } from '@data/text'
 import { Container } from '@atoms/layout'
 import { Loading } from '@atoms/loading'
 import { TextPostCard } from '../../components/text/TextPostCard'
+import { RoleLegend } from '@components/user-badges'
 import styles from '@style'
 
 export default function Community() {
@@ -30,10 +31,15 @@ export default function Community() {
   }
 
   return (
-    <div className={styles.posts_list}>
-      {posts.map((nft) => (
-        <TextPostCard key={nft.token_id} nft={nft} />
-      ))}
-    </div>
+    <>
+      <p className={styles.description}>
+        <RoleLegend />
+      </p>
+      <div className={styles.posts_list}>
+        {posts.map((nft) => (
+          <TextPostCard key={nft.token_id} nft={nft} />
+        ))}
+      </div>
+    </>
   )
 }
