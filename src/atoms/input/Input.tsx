@@ -42,9 +42,10 @@ interface InputProps {
   max?: number
   maxlength?: number
   label?: string
-  onChange?: (
-    value: number | string | React.FormEvent<HTMLInputElement>
-  ) => void
+  /** The change event, as React hands it over. */
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void
+  /** The typed value: a number for number inputs, a string otherwise. */
+  onValueChange?: (value: number | string) => void
   onBlur?: () => void
   // onWheel?: () => void
   disabled?: boolean
@@ -65,7 +66,8 @@ function Input(
     max,
     maxlength = 500,
     label,
-    onChange = (value) => null,
+    onChange = () => null,
+    onValueChange = () => null,
     onBlur = () => null,
     // onWheel = () => null,
     disabled,
@@ -80,25 +82,28 @@ function Input(
 ) {
   const [value, setValue] = useControlled(valueProp, defaultValue)
 
+  // `onChange` gets the event, the way every other input in the codebase and
+  // react-hook-form's `register` expect it. Callers that only want the typed
+  // value ask for `onValueChange`, so neither has to guess what it was handed.
   const handleInput = useCallback(
-    (e: React.FormEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       onChange(e)
-      const target = e.target as HTMLInputElement
+      const target = e.target
       if (target) {
         const v =
           type === 'number'
             ? !isNaN(target.valueAsNumber)
               ? target.valueAsNumber
               : target.value
-            : target.value;
-  
+            : target.value
+
         setValue(v)
-        onChange(v)
+        onValueChange(v)
       }
     },
-    [setValue, onChange, type]
-  );
-  
+    [setValue, onChange, onValueChange, type]
+  )
+
   return (
     <div className={`${styles.container} ${className || ''}`}>
       <label htmlFor={name || label || ''}>

@@ -414,9 +414,8 @@ function CustomCopyrightForm({ onChange, value, defaultValue }) {
     return null
   }
 
-  const handleSearchTokenInputChange = (event) => {
-    //console.log('event', event)
-    setSearchTokenQuery(event)
+  const handleSearchTokenInputChange = (value) => {
+    setSearchTokenQuery(value)
   }
 
   const handleRemoveToken = (indexToRemove, event) => {
@@ -680,9 +679,7 @@ Any modification to this Agreement's terms requires explicit consent from both t
     }
   }, [])
 
-  const handleUriChange = (eventOrValue) => {
-    const value = eventOrValue.target ? eventOrValue.target.value : eventOrValue
-
+  const handleUriChange = (value) => {
     function isValidURI(uri) {
       try {
         new URL(uri)
@@ -967,7 +964,7 @@ Any modification to this Agreement's terms requires explicit consent from both t
             <Input
               type="date"
               value={clauses?.expirationDate || initialClauses?.expirationDate}
-              onChange={(e) => handleChange(e, 'expirationDate')}
+              onValueChange={(v) => handleChange(v, 'expirationDate')}
               defaultValue={initialClauses?.expirationDate}
               className={styles.field}
             />
@@ -1012,7 +1009,7 @@ Any modification to this Agreement's terms requires explicit consent from both t
             <Input
               type="text"
               value={clauses?.customUri || ''}
-              onChange={(e) => handleUriChange(e)}
+              onValueChange={(v) => handleUriChange(v)}
               placeholder="Paste URI/URL Here (ipfs://, http://, https://)"
               className={styles.field}
             />
@@ -1162,7 +1159,7 @@ Any modification to this Agreement's terms requires explicit consent from both t
                   <Input
                     type="text"
                     value={searchTokenQuery}
-                    onChange={handleSearchTokenInputChange}
+                    onValueChange={handleSearchTokenInputChange}
                     placeholder="Enter a Tezos Token URL or External URL"
                     className={styles.field}
                   />
@@ -1185,9 +1182,7 @@ Any modification to this Agreement's terms requires explicit consent from both t
                   <Input
                     type="text"
                     value={contractAddress}
-                    onChange={(e) =>
-                      setContractAddress(e?.target?.value || e || '')
-                    }
+                    onChange={(e) => setContractAddress(e.target.value)}
                     placeholder="Enter contract address (e.g., KT1...)"
                     className={styles.field}
                   />
@@ -1195,7 +1190,7 @@ Any modification to this Agreement's terms requires explicit consent from both t
                   <Input
                     type="text"
                     value={tokenId}
-                    onChange={(e) => setTokenId(e?.target?.value || e || '')}
+                    onChange={(e) => setTokenId(e.target.value)}
                     placeholder="Enter token ID (e.g., 123456)"
                     className={styles.field}
                   />

@@ -74,7 +74,7 @@ export const Burn = () => {
                 type="number"
                 placeholder="OBJKTs to burn"
                 value={amount}
-                onChange={setAmount}
+                onValueChange={setAmount}
                 onBlur={(e) => {
                   if (parseInt(e.target.value) >= totalOwned) {
                     setAmount(totalOwned)

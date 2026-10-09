@@ -177,7 +177,7 @@ export default function ModeratorManagement({
                 name="moderator_address"
                 placeholder="tz1… or KT1… address"
                 value={newAddress}
-                onChange={(v) => setNewAddress(String(v))}
+                onValueChange={(v) => setNewAddress(String(v))}
               />
               <Button
                 fit

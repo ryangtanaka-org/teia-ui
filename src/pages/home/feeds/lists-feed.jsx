@@ -62,7 +62,7 @@ export function ListsFeed() {
           placeholder="link to a json list of tokens"
           type="text"
           value={_url}
-          onChange={_setUrl}
+          onValueChange={_setUrl}
         />
         <Button
           onClick={() => {

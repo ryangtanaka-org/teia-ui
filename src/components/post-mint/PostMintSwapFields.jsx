@@ -61,7 +61,7 @@ export function PostMintSwapFields({
           placeholder="OBJKT quantity"
           min={1}
           value={amount}
-          onChange={(v) => setAmount(String(v ?? ''))}
+          onValueChange={(v) => setAmount(String(v ?? ''))}
           onBlur={() => {
             setAmount((prev) => String(clampSwapAmountOnBlur(prev, editions)))
           }}
@@ -75,7 +75,7 @@ export function PostMintSwapFields({
         placeholder="Price per OBJKT (XTZ)"
         value={price}
         initial={0}
-        onChange={(v) => setPrice(v === '' ? '' : v)}
+        onValueChange={(v) => setPrice(v === '' ? '' : v)}
         onBlur={() => {
           setPrice((prev) => {
             const val = clampSwapPriceOnBlur(prev)

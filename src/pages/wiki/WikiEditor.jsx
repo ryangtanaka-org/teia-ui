@@ -51,10 +51,7 @@ export default function WikiEditor({ mode, pageId, initial }) {
   // For edits the slug is fixed; for new pages it's derived from the title.
   const slug = isEdit ? initial?.slug || '' : slugify(title)
 
-  const onTitleChange = (v) => {
-    const next = typeof v === 'string' ? v : v?.target?.value || ''
-    setTitle(next)
-  }
+  const onTitleChange = (v) => setTitle(String(v ?? ''))
 
   const parentOptions = (wiki?.pages || [])
     .filter((p) => p.id !== pageId)
@@ -145,7 +142,7 @@ export default function WikiEditor({ mode, pageId, initial }) {
           type="text"
           placeholder="Page title"
           value={title}
-          onChange={onTitleChange}
+          onValueChange={onTitleChange}
         />
         {!isEdit && (
           <small className={styles.hint}>
@@ -210,9 +207,7 @@ export default function WikiEditor({ mode, pageId, initial }) {
           type="text"
           placeholder="What changed?"
           value={summary}
-          onChange={(v) =>
-            setSummary(typeof v === 'string' ? v : v?.target?.value || '')
-          }
+          onValueChange={(v) => setSummary(String(v ?? ''))}
         />
       </div>
 

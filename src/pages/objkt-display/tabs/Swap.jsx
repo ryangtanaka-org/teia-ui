@@ -120,7 +120,7 @@ export const Swap = () => {
                 min={1}
                 value={amount}
                 /* max={total_amount - sales} */
-                onChange={setAmount}
+                onValueChange={setAmount}
                 onBlur={(e) => {
                   setAmount(
                     String(clampSwapAmountOnBlur(e.target.value, totalOwned))
@@ -137,7 +137,7 @@ export const Swap = () => {
                     placeholder="Price Per OBJKT (XTZ)"
                     value={price}
                     initial={0}
-                    onChange={setPrice}
+                    onValueChange={setPrice}
                     onBlur={(e) => {
                       const val = clampSwapPriceOnBlur(e.target.value)
                       setPrice(val)

@@ -152,7 +152,7 @@ export default function BakersPage() {
             <Input
               name="baker-search"
               value={search}
-              onChange={setSearch}
+              onValueChange={setSearch}
               placeholder="Search by name or address"
               label="Search"
             />

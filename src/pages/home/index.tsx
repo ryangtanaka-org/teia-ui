@@ -56,7 +56,7 @@ export function Home({ isSearch = false }) {
           <Input
             type="text"
             name="Enter a search term and press enter:"
-            onChange={(value) => {
+            onValueChange={(value) => {
               setSearchTerm(value as string)
             }}
             placeholder="Search ↵"

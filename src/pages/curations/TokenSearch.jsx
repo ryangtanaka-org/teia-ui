@@ -32,7 +32,7 @@ export default function TokenSearch({ selectedKeys, onToggle }) {
   }, [])
 
   const onChange = (value) => {
-    const v = typeof value === 'string' ? value : value?.target?.value || ''
+    const v = String(value ?? '')
     setQuery(v)
     clearTimeout(debounceRef.current)
     const q = v.trim()
@@ -75,7 +75,7 @@ export default function TokenSearch({ selectedKeys, onToggle }) {
         type="text"
         placeholder="token id, teia.art URL, artist name, or tz/KT address"
         value={query}
-        onChange={onChange}
+        onValueChange={onChange}
       />
 
       {loading && <p className={styles.empty}>Searching…</p>}

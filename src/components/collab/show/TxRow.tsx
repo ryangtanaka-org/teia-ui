@@ -48,7 +48,7 @@ export const TxRow = ({ tx, index, onAdd, onRemove }: TxRowProps) => {
           placeholder="OBJKT quantity"
           min={1}
           value={amount}
-          onChange={(v) => {
+          onValueChange={(v) => {
             if (typeof v === 'number') setAmount(v.toString())
           }}
         />
@@ -59,7 +59,7 @@ export const TxRow = ({ tx, index, onAdd, onRemove }: TxRowProps) => {
           label="Recipient"
           placeholder="to address (tz...)"
           value={destination}
-          onChange={(v) => {
+          onValueChange={(v) => {
             if (typeof v === 'string') {
               setDestination(v)
             }

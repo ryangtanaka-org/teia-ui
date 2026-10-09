@@ -138,7 +138,7 @@ export const Settings = () => {
             <Input
               name="custom-rpc"
               value={customRpcNode}
-              onChange={setCustomRpcNode}
+              onValueChange={setCustomRpcNode}
               placeholder="url to a RPC node"
               label="Custom RPC node"
               // pattern={'^(?:https?|http):\\/\\/[^\\s\\/$.?#].[^\\s]*$'}

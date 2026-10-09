@@ -476,7 +476,7 @@ export default function CurationEditor() {
             label="Title"
             placeholder="Curation title"
             value={title}
-            onChange={(v) => setTitle(typeof v === 'string' ? v : '')}
+            onValueChange={(v) => setTitle(typeof v === 'string' ? v : '')}
           />
 
           <div>
@@ -589,7 +589,9 @@ export default function CurationEditor() {
               type="text"
               placeholder="tag1, tag2, …"
               value={tagsInput}
-              onChange={(v) => setTagsInput(typeof v === 'string' ? v : '')}
+              onValueChange={(v) =>
+                setTagsInput(typeof v === 'string' ? v : '')
+              }
             />
           </div>
 

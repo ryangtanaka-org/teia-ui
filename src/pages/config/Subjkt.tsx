@@ -264,7 +264,7 @@ export const Subjkt = () => {
             <Input
               name="subjkt"
               value={subjkt}
-              onChange={setSubjkt}
+              onValueChange={setSubjkt}
               onBlur={(e) => {
                 if(/[^A-Za-z0-9-._]/.test(e.target.value)) {
                   show('Subjkt contains invalid characters. This field can only contain: letters (a-z A-Z), numbers (0-9), . (dot), - (dash), _ (underscore)')
@@ -277,7 +277,7 @@ export const Subjkt = () => {
             <Input
               name="description"
               value={description}
-              onChange={setDescription}
+              onValueChange={setDescription}
               placeholder="(Max length 500 characters)"
               label="Description"
             />

@@ -71,7 +71,7 @@ export default function TokenPicker({
   }, [tab, address, run])
 
   const onFilterChange = (value) => {
-    const v = typeof value === 'string' ? value : value?.target?.value || ''
+    const v = String(value ?? '')
     setFilter(v)
     setVisible(PAGE_SIZE)
     clearTimeout(debounceRef.current)
@@ -128,7 +128,7 @@ export default function TokenPicker({
                   : 'Filter your creations'
               }
               value={filter}
-              onChange={onFilterChange}
+              onValueChange={onFilterChange}
             />
           )}
 
